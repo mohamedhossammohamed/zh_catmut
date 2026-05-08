@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Launch copy for HN, Reddit, and X.">
+    <title>zh_catmut | Launch Kit</title>
+    <link rel="stylesheet" href="assets/css/site.css">
+    <style>
+      .md-article h1{font-size:2.2rem;margin:2.2rem 0 1rem}
+      .md-article h2{font-size:1.6rem;margin:2rem 0 0.8rem;color:var(--python)}
+      .md-article h3{font-size:1.25rem;margin:1.4rem 0 0.6rem;color:var(--cyan)}
+      .md-article p{line-height:1.75;margin:0.8rem 0}
+      .md-article ul,.md-article ol{margin:0.8rem 0;padding-left:1.4rem}
+      .md-article li{margin:0.35rem 0}
+      .md-article code{background:rgba(255,255,255,0.06);padding:0.15rem 0.4rem;border-radius:6px;font-size:0.92em}
+      .md-article pre{background:rgba(0,0,0,0.35);border:1px solid var(--line);border-radius:14px;padding:1.1rem 1.3rem;overflow-x:auto}
+      .md-article pre code{background:none;padding:0}
+      .md-article table{width:100%;border-collapse:collapse;margin:1rem 0}
+      .md-article th,.md-article td{padding:0.6rem 0.8rem;border:1px solid var(--line);text-align:left}
+      .md-article th{background:rgba(255,255,255,0.05)}
+      .md-article blockquote{border-left:3px solid var(--violet);padding-left:1rem;margin:1rem 0;color:var(--muted)}
+      .md-article a{color:var(--python);text-decoration:underline;text-underline-offset:3px}
+      .md-article hr{border:none;border-top:1px solid var(--line);margin:2rem 0}
+      .md-article .toc{background:rgba(13,20,35,0.6);border:1px solid var(--line);border-radius:16px;padding:1.2rem 1.6rem;margin:1.2rem 0}
+      .md-article .toc ul{list-style:none;padding-left:0}
+      .md-article .toc li{margin:0.3rem 0}
+      .md-article .toc a{color:var(--muted);text-decoration:none}
+      .md-article .toc a:hover{color:var(--text)}
+      .mermaid{background:rgba(0,0,0,0.2);border-radius:14px;padding:1rem}
+    </style>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <canvas class="particle-canvas" data-particles aria-hidden="true"></canvas>
+    <div class="site-shell">
+      <header class="nav">
+        <div class="nav-inner">
+          <a class="brand" href="index.html" aria-label="zh_catmut home">
+            <span class="brand-mark" aria-hidden="true"></span>
+            <span class="brand-text">
+              <span class="brand-name">zh_catmut</span>
+              <span class="brand-subtitle">docs</span>
+            </span>
+          </a>
+          <button class="nav-toggle" type="button" data-nav-toggle aria-label="Toggle navigation" aria-expanded="false"><span></span></button>
+          <nav class="nav-links" aria-label="Primary navigation">
+            <a href="index.html">Landing</a>
+            <a href="docs.html">Docs</a>
+            <a href="architecture.html">Architecture</a>
+            <a href="https://github.com/mohamedhossammohamed/zh_catmut" target="_blank" rel="noopener">GitHub</a>
+          </nav>
+        </div>
+      </header>
+
+      <main id="main">
+        <section class="page-hero">
+          <div class="container">
+            <div class="reveal">
+              <p class="eyebrow"><span class="eyebrow-dot"></span>Ready to share</p>
+              <h1>Launch Kit</h1>
+              <p>Pre-written launch copy for Hacker News, Reddit, and X threads.</p>
+            </div>
+          </div>
+        </section>
+
+        <div class="container docs-layout">
+          <aside class="docs-sidebar reveal" aria-label="Documentation contents">
+            <strong>Contents</strong>
+            <nav>
+              
+            </nav>
+          </aside>
+
+          <article class="doc-article md-article">
+            <h1 id="zh_catmut-launch-kit">zh_catmut Launch Kit</h1>
+<p>This launch copy documents the actual V1 implementation: Python plus a bundled Zig native core through a C ABI.</p>
+<h2 id="hacker-news">Hacker News</h2>
+<h3 id="title">Title</h3>
+<p>Show HN: zh_catmut - Native remapping for Pandas categorical code buffers</p>
+<h3 id="first-comment">First Comment</h3>
+<p>I built <code>zh_catmut</code> to target a specific Pandas bottleneck: relabeling or merging large categorical columns without expanding the data into object arrays or allocating large temporary masks.</p>
+<p>Pandas categoricals are dictionary encoded. The full column is a dense integer <code>codes</code> buffer; the category labels are small metadata. <code>zh_catmut</code> keeps label reconciliation in Python, builds a dense <code>int64</code> lookup table, and sends only raw code-buffer pointers, lengths, dtype IDs, flags, and POD report structs across a strict C ABI.</p>
+<p>The native core is Zig. It exposes stable C symbols loaded with <code>ctypes.CDLL</code>, so the GIL is released during the batch remap. Before mutation, Python checks dtype, contiguity, size bounds, writeability, and Pandas Copy-on-Write safety. Native code then runs a predictive validation pass over the codes and LUT. If any code or target is invalid, the in-place path does not write a single element.</p>
+<p>V1 deliberately does not pass Python objects, Pandas objects, strings, dicts, JSON, or object arrays to native code. Python owns every buffer. For unsafe CoW cases, <code>copy_fallback=True</code> allocates a Python-owned destination array and uses the native copy path.</p>
+<p>I am interested in critique on the ABI design, Pandas CoW gate, and whether the scalar LUT loop is the right V1 baseline before adding specialized SIMD/parallel kernels.</p>
+<h2 id="reddit">Reddit</h2>
+<h3 id="rpython">r/Python</h3>
+<p>Title: Native LUT remapping for huge Pandas categorical columns</p>
+<p>We all know the painful version of this: a categorical column is compact until you need to relabel, merge, or realign categories at scale, then high-level Pandas operations can allocate replacement arrays, temporary masks, or object-mode intermediates.</p>
+<p><code>zh_catmut</code> targets the integer payload directly. Pandas categoricals store labels as metadata and the full column as dense signed integer codes. The package builds a dense <code>int64</code> LUT from the category metadata, validates all Python/Pandas/NumPy invariants, then calls a bundled Zig shared library through a strict C ABI.</p>
+<p>Usage:</p>
+<pre><code class="language-python">import pandas as pd
+from zh_catmut import remap_categorical
+
+s = pd.Series(pd.Categorical([&quot;pending&quot;, &quot;active&quot;, &quot;old&quot;, None]))
+out = remap_categorical(s, {&quot;pending&quot;: &quot;active&quot;, &quot;old&quot;: &quot;disabled&quot;}, copy_fallback=True)
+</code></pre>
+<p>The native layer receives only raw pointers, lengths, dtype IDs, flags, and report structs. It does not see Python strings or Pandas objects. Native validation is all-or-nothing before mutation, and unsafe Pandas Copy-on-Write cases can use the copy fallback path.</p>
+<p>Install:</p>
+<pre><code class="language-bash">pip install zh-catmut
+</code></pre>
+<h3 id="rzig">r/Zig</h3>
+<p>Title: Zig native core for remapping Pandas categorical code buffers through a C ABI</p>
+<p>I used Zig for the native core of <code>zh_catmut</code>, a Python package that remaps Pandas categorical code buffers without passing Python objects into native code.</p>
+<p>The Python side builds a dense <code>int64</code> LUT from category metadata, then calls exported Zig functions through <code>ctypes.CDLL</code>. The ABI accepts only pointers, lengths, dtype IDs, flags, and POD reports. Python owns all buffers; Zig borrows pointers only for the duration of each call.</p>
+<p>The main exported functions:</p>
+<ul>
+<li><code>zhcm_predict_remap_lut</code></li>
+<li><code>zhcm_remap_lut_inplace</code></li>
+<li><code>zhcm_remap_lut_copy</code></li>
+</ul>
+<p>The implementation starts with a scalar contiguous LUT remap for <code>int8</code>, <code>int16</code>, <code>int32</code>, and <code>int64</code> code buffers. The design leaves room for specialized SIMD/parallel kernels once the ABI and safety behavior are stable.</p>
+<p>I would welcome feedback on the C ABI shape and Zig implementation strategy.</p>
+<h3 id="rdotnet">r/dotnet</h3>
+<p>No <code>r/dotnet</code> launch copy is included because V1 is implemented in Zig, not C# NativeAOT. Publishing a .NET-focused post would misrepresent the code.</p>
+<h2 id="x-thread">X Thread</h2>
+<h3 id="tweet-1">Tweet 1</h3>
+<p>Pandas categoricals are memory-efficient until relabeling or category alignment forces large temporary arrays or object-mode fallbacks.</p>
+<p><code>zh_catmut</code> remaps the dense integer code buffer directly through a native C ABI.</p>
+<h3 id="tweet-2">Tweet 2</h3>
+<p>Python builds the category LUT and validates Pandas/NumPy safety; a bundled Zig shared library receives only raw pointers, lengths, flags, and POD reports, then remaps the contiguous codes in one batch.</p>
+<h3 id="tweet-3">Tweet 3</h3>
+<p>Install:</p>
+<pre><code class="language-bash">pip install zh-catmut
+</code></pre>
+<p>GitHub: <code>&lt;your GitHub repository URL&gt;</code></p>
+          </article>
+        </div>
+      </main>
+
+      <footer class="site-footer">
+        <div class="footer-inner">
+          <div>zh_catmut: native LUT remapping for large Pandas categorical code buffers.</div>
+          <div class="footer-links">
+            <a href="docs.html">Docs</a>
+            <a href="architecture.html">Architecture</a>
+            <a href="index.html">Landing</a>
+          </div>
+        </div>
+      </footer>
+    </div>
+    <script src="assets/js/site.js"></script>
+    
+  </body>
+</html>

@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "zh-catmut"
+version = "0.1.0"
+description = "Native LUT remapping for large Pandas categorical code buffers"
+readme = "docs/README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "numpy",
+    "pandas",
+]
+authors = [
+    { name = "zh_catmut contributors" },
+]
+license = { text = "Proprietary" }
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+zh_catmut = [
+    "py.typed",
+    "libzh_catmut.so",
+    "libzh_catmut.dylib",
+    "zh_catmut.dll",
+]

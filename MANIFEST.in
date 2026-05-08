@@ -1,0 +1,5 @@
+include include/zh_catmut_abi.h
+include native/build.zig
+include native/src/root.zig
+recursive-include src/zh_catmut *.py py.typed *.so *.dylib *.dll
+recursive-include compiled *.so *.dylib *.dll

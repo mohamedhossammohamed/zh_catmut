@@ -1,0 +1,353 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Build systems, CI/CD pipelines, cross-platform wheel distribution, and Arrow PyCapsules.">
+    <title>zh_catmut | Build Systems & Distribution</title>
+    <link rel="stylesheet" href="assets/css/site.css">
+    <style>
+      .md-article h1{font-size:2.2rem;margin:2.2rem 0 1rem}
+      .md-article h2{font-size:1.6rem;margin:2rem 0 0.8rem;color:var(--python)}
+      .md-article h3{font-size:1.25rem;margin:1.4rem 0 0.6rem;color:var(--cyan)}
+      .md-article p{line-height:1.75;margin:0.8rem 0}
+      .md-article ul,.md-article ol{margin:0.8rem 0;padding-left:1.4rem}
+      .md-article li{margin:0.35rem 0}
+      .md-article code{background:rgba(255,255,255,0.06);padding:0.15rem 0.4rem;border-radius:6px;font-size:0.92em}
+      .md-article pre{background:rgba(0,0,0,0.35);border:1px solid var(--line);border-radius:14px;padding:1.1rem 1.3rem;overflow-x:auto}
+      .md-article pre code{background:none;padding:0}
+      .md-article table{width:100%;border-collapse:collapse;margin:1rem 0}
+      .md-article th,.md-article td{padding:0.6rem 0.8rem;border:1px solid var(--line);text-align:left}
+      .md-article th{background:rgba(255,255,255,0.05)}
+      .md-article blockquote{border-left:3px solid var(--violet);padding-left:1rem;margin:1rem 0;color:var(--muted)}
+      .md-article a{color:var(--python);text-decoration:underline;text-underline-offset:3px}
+      .md-article hr{border:none;border-top:1px solid var(--line);margin:2rem 0}
+      .md-article .toc{background:rgba(13,20,35,0.6);border:1px solid var(--line);border-radius:16px;padding:1.2rem 1.6rem;margin:1.2rem 0}
+      .md-article .toc ul{list-style:none;padding-left:0}
+      .md-article .toc li{margin:0.3rem 0}
+      .md-article .toc a{color:var(--muted);text-decoration:none}
+      .md-article .toc a:hover{color:var(--text)}
+      .mermaid{background:rgba(0,0,0,0.2);border-radius:14px;padding:1rem}
+    </style>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <canvas class="particle-canvas" data-particles aria-hidden="true"></canvas>
+    <div class="site-shell">
+      <header class="nav">
+        <div class="nav-inner">
+          <a class="brand" href="index.html" aria-label="zh_catmut home">
+            <span class="brand-mark" aria-hidden="true"></span>
+            <span class="brand-text">
+              <span class="brand-name">zh_catmut</span>
+              <span class="brand-subtitle">docs</span>
+            </span>
+          </a>
+          <button class="nav-toggle" type="button" data-nav-toggle aria-label="Toggle navigation" aria-expanded="false"><span></span></button>
+          <nav class="nav-links" aria-label="Primary navigation">
+            <a href="index.html">Landing</a>
+            <a href="docs.html">Docs</a>
+            <a href="architecture.html">Architecture</a>
+            <a href="https://github.com/mohamedhossammohamed/zh_catmut" target="_blank" rel="noopener">GitHub</a>
+          </nav>
+        </div>
+      </header>
+
+      <main id="main">
+        <section class="page-hero">
+          <div class="container">
+            <div class="reveal">
+              <p class="eyebrow"><span class="eyebrow-dot"></span>Document 04</p>
+              <h1>Build Systems & Distribution</h1>
+              <p>Packaging native extensions for Linux, macOS, and Windows via GitHub Actions and cibuildwheel.</p>
+            </div>
+          </div>
+        </section>
+
+        <div class="container docs-layout">
+          <aside class="docs-sidebar reveal" aria-label="Documentation contents">
+            <strong>Contents</strong>
+            <nav>
+              
+            </nav>
+          </aside>
+
+          <article class="doc-article md-article">
+            <h1 id="native-extension-architecture-for-python-build-systems-cross-platform-distribution-and-dynamic-loading"><strong>Native Extension Architecture for Python: Build Systems, Cross-Platform Distribution, and Dynamic Loading</strong></h1>
+<h2 id="1-introduction-and-architectural-imperative"><strong>1. Introduction and Architectural Imperative</strong></h2>
+<p>The convergence of high-performance data processing frameworks within the Python ecosystem has established the Arrow C Data Interface as the paramount standard for zero-copy memory exchange.1 For analytical workloads, particularly those involving the in-place modification of Pandas Categorical memory arrays, executing operations at native machine speed while avoiding the Global Interpreter Lock (GIL) is an architectural necessity.2 Achieving this paradigm requires the deployment of natively compiled extensions that expose a strictly defined C Application Binary Interface (C-ABI).1<br />
+While traditional Python extensions are authored in C, C++, or Rust, modern toolchains such as Zig and.NET NativeAOT (C#) offer compelling alternatives.4 These languages provide superior cross-compilation capabilities, robust standard libraries, and stringent memory safety paradigms while maintaining full C-ABI compatibility.4 However, orchestrating the build, packaging, and distribution of non-C/C++ native binaries into standard Python wheels—ensuring seamless pip install functionality for data scientists without local compiler requirements—presents a complex continuous integration challenge.6<br />
+This comprehensive technical analysis evaluates the architectural requirements for integrating Zig and C# NativeAOT into standard Python packaging workflows.7 The report systematically addresses build system orchestration utilizing setuptools and scikit-build-core, cross-platform compilation matrices driven by cibuildwheel within GitHub Actions, and the intricate runtime mechanics of dynamic library loading and PyCapsule initialization via the Arrow C Data Interface.9</p>
+<h2 id="2-native-extension-build-system-orchestration"><strong>2. Native Extension Build System Orchestration</strong></h2>
+<p>The foundational challenge in packaging native extensions lies in bridging the Python packaging ecosystem, governed by PEP 517 and PEP 518, with external compiler toolchains.10 Modern Python relies on build backends to produce source distributions (SDists) and binary wheels.10 Integrating non-standard compilers, such as the Zig compiler or the.NET SDK ILCompiler, requires precise interception of the wheel construction lifecycle to ensure the compiled artifacts are correctly bundled into the final archive.10</p>
+<h3 id="21-zig-build-system-integration-and-orchestration"><strong>2.1 Zig Build System Integration and Orchestration</strong></h3>
+<p>Zig is a general-purpose programming language and toolchain equipped with a highly capable, declarative build system executed via a build.zig script.14 This system replaces traditional Makefiles or CMake configurations, allowing developers to define build graphs, targets, and optimization levels entirely in Zig code.14 When integrating Zig into a Python packaging workflow, architects must evaluate whether to bridge Zig through an existing C/C++ backend or to invoke the Zig compiler directly from a native Python build script.17</p>
+<h4 id="211-bridging-via-scikit-build-core"><strong>2.1.1 Bridging via Scikit-Build-Core</strong></h4>
+<p>scikit-build-core is a modern, PEP 517-compliant build backend engineered to connect CMake to Python packaging.12 It replaces the legacy, heavily patched setuptools configurations of the past, providing robust support for cross-compilation, dynamic metadata plugins, and strictly isolated build environments defined entirely within a pyproject.toml file.10<br />
+For a Zig-based extension, scikit-build-core can be leveraged by configuring CMake to utilize Zig as the primary C and C++ compiler via the zig cc and zig c++ commands.4 The Zig toolchain acts as a seamless drop-in replacement for Clang, possessing the unique architectural advantage of bundling standard C libraries, such as glibc and musl, for dozens of target architectures.4 This enables effortless cross-compilation directly from the CMake interface without requiring the installation of complex cross-compilation SDKs on the host machine.4<br />
+However, if the extension is written entirely in the Zig language rather than C/C++, integrating a native build.zig script into a CMake-driven scikit-build-core pipeline requires wrapping the build.zig invocation within a CMake add_custom_command or ExternalProject_Add directive.21 This approach introduces an unnecessary layer of indirection. While scikit-build-core excels for projects maintaining substantial existing CMake infrastructure, utilizing it solely as a wrapper for zig build complicates the build graph and obscures the native caching mechanisms provided by the Zig compiler.15</p>
+<h4 id="212-direct-integration-via-setuptools-and-subprocessing"><strong>2.1.2 Direct Integration via Setuptools and Subprocessing</strong></h4>
+<p>For pure Zig projects, directly overriding the build_ext command within the setuptools framework offers a highly cohesive and transparent architecture.23 Third-party plugins, most notably setuptools-zig, have pioneered this approach, allowing developers to specify build_zig=True within the standard setup() function.8<br />
+To build a shared library without relying on external plugins, the architectural blueprint involves subclassing setuptools.command.build_ext.build_ext.13 The custom class intercepts the C-extension build phase, maps Python's expected output paths, and spawns a subprocess invoking the Zig compiler directly.13</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Setuptools Execution Phase</th>
+<th style="text-align: left;">Custom Override Implementation Logic</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">initialize_options</td>
+<td style="text-align: left;">Defines custom attributes, establishing the default optimization levels such as ReleaseFast, ReleaseSafe, or Debug based on the host environment.13</td>
+</tr>
+<tr>
+<td style="text-align: left;">finalize_options</td>
+<td style="text-align: left;">Resolves absolute directory paths, ensuring the build_lib directory is identified so the compiled shared library can be deposited in the correct location for wheel inclusion.13</td>
+</tr>
+<tr>
+<td style="text-align: left;">build_extension</td>
+<td style="text-align: left;">Constructs the CLI subprocess array (e.g., ``) and executes it via the self.spawn() method.13</td>
+</tr>
+</tbody>
+</table>
+<p>By bypassing scikit-build-core in favor of a customized setuptools extension, the pipeline ensures that Zig's native dependency manager and caching mechanisms remain the authoritative source of truth for the native binary's construction.13 This approach natively handles the generation of .so, .dll, or .dylib files and deposits them directly into the package structure, ensuring that the subsequent bdist_wheel command seamlessly packages the native binary alongside the Python source files.27</p>
+<h3 id="22-c-nativeaot-compilation-matrix-and-orchestration"><strong>2.2 C# NativeAOT Compilation Matrix and Orchestration</strong></h3>
+<p>The introduction of.NET NativeAOT (Ahead-of-Time) compilation radically alters the deployment profile of C# applications and libraries.29 Instead of compiling to Intermediate Language (IL) that relies on the CoreCLR Just-In-Time (JIT) compiler during execution, NativeAOT utilizes an ILCompiler to produce a fully self-contained, statically linked native executable or dynamically loaded shared library.31 This compilation paradigm enables C# code to expose a standard C-ABI, making it fully consumable by Python via ctypes or cffi, while delivering instantaneous startup times and drastically reduced memory footprints.30</p>
+<h4 id="221-msbuild-and-the-nativeaot-configuration-profile"><strong>2.2.1 MSBuild and the NativeAOT Configuration Profile</strong></h4>
+<p>To compile a C# project as a native shared library, specific MSBuild properties must be explicitly declared within the .csproj file. The foundational property is \&lt;PublishAot&gt;true\&lt;/PublishAot&gt;, which instructs the build system to route the assembly through the ILCompiler rather than the standard JIT output path.34 Concurrently, the property \&lt;NativeLib&gt;Shared\&lt;/NativeLib&gt; must be defined to instruct the native linker to emit a dynamically loaded library rather than a standalone executable application.33<br />
+Furthermore, to optimize the library for integration into a Python wheel, additional trimming properties should be leveraged to aggressively reduce the final binary size.35 By declaring \&lt;PublishTrimmed&gt;true\&lt;/PublishTrimmed&gt; and \&lt;InvariantGlobalization&gt;true\&lt;/InvariantGlobalization&gt;, the compiler executes static flow analysis to strip away unused.NET framework dependencies, reducing a typical standard library overhead from dozens of megabytes down to a highly portable artifact.35 Developers must strictly avoid runtime reflection and dynamic code generation within the C# extension, as the NativeAOT compiler cannot resolve dynamic type discovery during the ahead-of-time compilation phase.29<br />
+To expose C# methods to the C-ABI, the [UnmanagedCallersOnly(EntryPoint \= "method_name")] attribute is applied to static methods, signaling the ILCompiler to generate an unmanaged export symbol accessible to the Python interpreter.37 Frameworks such as DotWrap automate this process, generating both the C# unmanaged exports and the corresponding Python ctypes wrappers.5</p>
+<h4 id="222-intercepting-setuptools-fornet-publish-commands"><strong>2.2.2 Intercepting Setuptools for.NET Publish Commands</strong></h4>
+<p>Similar to the Zig integration strategy, packing a NativeAOT library requires overriding the setuptools build command to invoke the.NET CLI.26 The custom build_ext class must orchestrate the dotnet publish command as a spawned subprocess, intercepting the standard C-compiler workflow.26<br />
+The primary architectural complexity in this integration lies in translating Python's build environment parameters into.NET Runtime Identifiers (RIDs). The dotnet publish command demands an explicit -r \&lt;RID&gt; argument to resolve the appropriate target architecture and operating system combination for the ILCompiler.34 The Python ecosystem relies on PEP 425 platform compatibility tags (e.g., linux_x86_64, macosx_arm64), which do not directly align with.NET RIDs.40<br />
+The override script must intelligently query the host platform—or the cross-compilation environment variables injected by the CI system—and map them to the rigid.NET RID catalog.41</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Python Platform Tag Component</th>
+<th style="text-align: left;">Corresponding.NET Runtime Identifier (RID)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">linux_x86_64</td>
+<td style="text-align: left;">linux-x64 34</td>
+</tr>
+<tr>
+<td style="text-align: left;">linux_aarch64</td>
+<td style="text-align: left;">linux-arm64 34</td>
+</tr>
+<tr>
+<td style="text-align: left;">macosx_x86_64</td>
+<td style="text-align: left;">osx-x64 42</td>
+</tr>
+<tr>
+<td style="text-align: left;">macosx_arm64</td>
+<td style="text-align: left;">osx-arm64 42</td>
+</tr>
+<tr>
+<td style="text-align: left;">win_amd64</td>
+<td style="text-align: left;">win-x64 32</td>
+</tr>
+</tbody>
+</table>
+<p>The orchestrated subprocess command takes the definitive form: dotnet publish -c Release -r \&lt;MAPPED_RID&gt; /p:PublishAot=true -o \&lt;BUILD_LIB_PATH&gt;.30 The custom setuptools pipeline must then locate the resulting .so, .dll, or .dylib artifact within the output directory and programmatically copy it adjacent to the Python module source files before the final wheel packaging sequence concludes.26</p>
+<h2 id="3-continuous-integration-and-cross-platform-distribution"><strong>3. Continuous Integration and Cross-Platform Distribution</strong></h2>
+<p>Deploying native extensions to a diverse data science user base necessitates pre-compiling binary wheels for multiple operating systems and CPU architectures. Requiring end-users to possess the Zig compiler or the comprehensive.NET 8/9 SDK locally fundamentally violates the frictionless pip install paradigm.5 Therefore, Continuous Integration (CI) pipelines must build and upload these multi-platform wheels to the Python Package Index (PyPI) or a private repository.44</p>
+<h3 id="31-the-cibuildwheel-orchestration-lifecycle"><strong>3.1 The Cibuildwheel Orchestration Lifecycle</strong></h3>
+<p>The industry-standard architectural tool for orchestrating cross-platform Python wheel builds is cibuildwheel.45 Executed within a CI provider such as GitHub Actions, cibuildwheel automates the creation of strictly isolated build environments, iterating over multiple Python versions (such as CPython 3.9 through 3.13, PyPy, and GraalPy) and sequentially invoking the PEP 517 build backend defined in the project's pyproject.toml.45<br />
+For a native extension project, the GitHub Actions workflow defines a matrix strategy covering standard runners such as ubuntu-latest, windows-latest, macos-13 (Intel), and macos-14 (Apple Silicon).46 The pipeline utilizes the pypa/cibuildwheel GitHub action to initiate the build matrix, automatically aggregating the resulting wheels into an artifact repository for final deployment.48</p>
+<h4 id="311-environment-injection-and-toolchain-provisioning"><strong>3.1.1 Environment Injection and Toolchain Provisioning</strong></h4>
+<p>cibuildwheel executes macOS and Windows builds directly on the CI runner host, meaning any global dependencies or compilers installed prior to execution are natively available to the Python build script.46 However, Linux builds occur inside highly controlled, isolated Docker containers (specifically manylinux or musllinux images) to guarantee strict glibc backward compatibility across a multitude of enterprise distributions.11<br />
+Because these containers provide strictly minimal environments based on older operating systems (such as CentOS 7 for manylinux2014 or AlmaLinux 8 for manylinux_2_28), neither the Zig compiler nor the.NET SDK are present by default.11 To provision these required toolchains inside the container prior to the build phase, architects must utilize the CIBW_BEFORE_ALL configuration option.48<br />
+This configuration parameter accepts shell commands that are executed inside the container environment immediately before the wheel building iteration begins.49 For a C# NativeAOT pipeline, the CIBW_BEFORE_ALL_LINUX directive must execute a bash sequence to securely download the.NET SDK tarball via curl, extract it to a persistent directory, and append the binary path to the environmental execution scope.50<br />
+For a Zig-based extension, a parallel methodology is employed to download the pre-compiled Zig binary release.52 The installation step is remarkably lightweight, as Zig is entirely self-contained and avoids system-level dependency conflicts entirely.4</p>
+<h3 id="32-cross-compilation-and-hardware-emulation-strategies"><strong>3.2 Cross-Compilation and Hardware Emulation Strategies</strong></h3>
+<p>Providing wheels for ARM64 architectures (such as Apple M-series chips and AWS Graviton processors) is critical for modern data science, as analytical workloads rapidly migrate to high-efficiency ARM hardware.42</p>
+<h4 id="321-linux-arm64-emulation-constraints"><strong>3.2.1 Linux ARM64 Emulation Constraints</strong></h4>
+<p>On GitHub Actions, compiling aarch64 Linux wheels typically requires hardware emulation if native ARM runners are unavailable or costly to configure. By integrating the docker/setup-qemu-action, cibuildwheel seamlessly routes aarch64 builds through QEMU.48<br />
+However, NativeAOT compilation via QEMU emulation introduces severe performance degradation and occasional memory allocation faults due to the intense computational requirements of the ILCompiler.42 The process of analyzing the entire.NET assembly graph to generate static native code frequently exhausts emulated memory limits.53 Consequently, it is strongly advised to utilize native ARM64 GitHub Actions runners (e.g., ubuntu-24.04-arm) mapped within the CI matrix to execute the cibuildwheel process directly on bare metal or virtualized ARM infrastructure.11</p>
+<h4 id="322-macos-universal2-and-apple-silicon"><strong>3.2.2 macOS Universal2 and Apple Silicon</strong></h4>
+<p>For macOS environments, cibuildwheel robustly supports cross-compilation. An Intel-based runner can compile arm64 wheels if the underlying toolchain supports cross-targeting.47 The C# ILCompiler currently possesses limited support for cross-architecture NativeAOT compilation, inherently dependent on the presence of the host SDK.42 Thus, utilizing the macos-14 runner specifically for Apple Silicon and macos-13 for Intel x86_64 prevents cross-compilation linker errors.46<br />
+Zig natively excels at cross-compilation via the explicit -Dtarget flag.4 If the build system extracts the target architecture from the ARCHFLAGS or CIBW_ARCHS environment variables provided by cibuildwheel, the custom build_ext script can effortlessly instruct zig build-lib to target aarch64-macos-none or x86_64-windows-gnu directly from a standard Linux runner, drastically accelerating the CI workflow by centralizing compilation tasks.4</p>
+<h3 id="33-glibc-compatibility-and-the-manylinux-standard"><strong>3.3 Glibc Compatibility and the Manylinux Standard</strong></h3>
+<p>The manylinux standard dictates that Linux binary distributions must link against an incredibly old version of glibc to ensure forward compatibility with enterprise distributions. The historical manylinux2014 standard guarantees compatibility with systems using glibc 2.17.55<br />
+Zig handles this requirement transparently. Because it does not rely strictly on the host system's C library, it can target specific glibc versions directly via its target triple (e.g., x86_64-linux-gnu.2.17).57 This guarantees that a Zig extension compiled on a modern Ubuntu runner will execute flawlessly on legacy Red Hat Enterprise Linux servers.57<br />
+Conversely, C# NativeAOT poses distinct challenges. The.NET ILCompiler relies on the host environment's linker and glibc headers. Compiling NativeAOT inside manylinux2014 has historically encountered linker assertions and missing symbols (e.g., mallinfo2 or advanced thread-local storage primitives).58 Therefore, NativeAOT extensions generally demand the more modern manylinux_2_28 image (based on AlmaLinux 8, glibc 2.28), consciously dropping support for end-of-life Linux distributions.11 The build system architect must configure pyproject.toml to explicitly declare this compatibility baseline:</p>
+<p>Ini, TOML</p>
+<p>[tool.cibuildwheel]<br />
+manylinux-x86_64-image \= "manylinux_2_28"<br />
+manylinux-aarch64-image \= "manylinux_2_28"</p>
+<h3 id="34-dynamic-loading-architecture-and-repair-mechanics"><strong>3.4 Dynamic Loading Architecture and Repair Mechanics</strong></h3>
+<p>Once the native compiler generates the shared library, the Python wheel packaging process must manage absolute and relative dependencies embedded within the binary metadata, ensuring the target operating system's dynamic loader can resolve the extension at runtime.59<br />
+When cibuildwheel finishes invoking the build backend, it automatically subjects the resulting wheel to a platform-specific repair tool: auditwheel for Linux, delocate for macOS, and delvewheel for Windows.45 These tools introspect the shared library to identify dependencies on non-standard external libraries. If an external dependency is identified, the repair tool copies the .so or .dylib into the wheel archive and rewrites the dynamic linking metadata of the primary extension to point to the newly bundled copy.62<br />
+On Linux, auditwheel modifies the RPATH (Run-Time Search Path) or RUNPATH of the binary. It inserts a relative path utilizing the $ORIGIN variable, instructing the dynamic linker (ld.so) to search for dependencies relative to the location of the calling library.59<br />
+Both Zig and NativeAOT inherently limit external dependencies, often resulting in binaries that only link against libc, libm, libpthread, and libdl.64 Because these are foundational system libraries permitted by the manylinux standard, auditwheel will analyze the Zig or NativeAOT binary, determine no prohibited external dependencies exist, assign the appropriate manylinux tag, and pass the wheel without modification.56<br />
+For Windows, RPATH concepts do not exist.65 The Windows loader resolves DLLs using the system PATH, the application directory, or explicit paths passed to the loader.66 Since NativeAOT and Zig strongly encourage single-file monolithic shared libraries, complex dependency resolution is elegantly bypassed, resulting in clean, self-contained artifacts.32</p>
+<h2 id="4-safest-python-side-module-initialization"><strong>4. Safest Python-Side Module Initialization</strong></h2>
+<p>Once the fully self-contained wheel is deployed to the end-user's environment via pip install, the Python interpreter must successfully locate, load, and instantiate the native code. Hardcoding relative filesystem paths (e.g., ../lib/extension.so) creates highly fragile architectures that fracture when executed from varying virtual environments, zipped imports, or PyInstaller deployments.67</p>
+<h3 id="41-locating-the-compiled-binary-dynamically"><strong>4.1 Locating the Compiled Binary Dynamically</strong></h3>
+<p>The optimal architectural pattern for dynamically locating the shared library leverages Python's modern resource loading APIs or explicit boundary calculations relative to the __file__ attribute of the executing script.69<br />
+The library loader must natively account for platform-specific filename extensions. The ctypes.util.find_library function is notoriously unreliable for localized package directories, meaning constructing the absolute path explicitly is required.60<br />
+By ensuring the build_ext step deposits the compiled .so, .dll, or .dylib directly into the package directory adjacent to the Python __init__.py file, the __file__ resolution guarantees an accurate discovery regardless of the virtual environment's topological depth.66 Additionally, the importlib.resources.files API introduced in Python 3.9 provides a strictly safer alternative to __file__ for discovering intra-package binary assets, smoothly accommodating scenarios where the package resides within a zipped archive or constrained execution environment.68<br />
+When a reliable absolute path is resolved, the module executes a ctypes.CDLL() instantiation on Linux and macOS, or a ctypes.WinDLL() call on Windows if the native compiler enforces stdcall conventions rather than cdecl.70</p>
+<h3 id="42-handling-windows-dll-search-paths"><strong>4.2 Handling Windows DLL Search Paths</strong></h3>
+<p>In Python 3.8 and newer, the mechanism for locating Windows DLL dependencies tightened significantly for security purposes, ignoring the global PATH variable entirely.72 If a NativeAOT or Zig DLL depends on another bundled DLL, the standard LoadLibrary call will fail with a FileNotFoundError despite the DLL existing in the same directory.72<br />
+To circumvent this, the Python module must explicitly call os.add_dll_directory(package_dir) prior to loading the main extension.72 This securely amends the DLL search path strictly for the executing context, ensuring that internal dependencies resolve without polluting the global environment or requiring anti-patterns like modifying LD_LIBRARY_PATH on Unix systems.60</p>
+<h3 id="43-ffi-definitions-and-calling-conventions"><strong>4.3 FFI Definitions and Calling Conventions</strong></h3>
+<p>To interact reliably with the loaded ctypes.CDLL object, the Python layer must strictly define the argument types (argtypes) and return type (restype) of the exposed C-ABI functions.3 Without explicit type declarations, ctypes defaults to assuming int returns, leading to catastrophic segmentation faults when receiving 64-bit pointers.73<br />
+Because C# NativeAOT mandates the use of [UnmanagedCallersOnly(EntryPoint \= "modify_categorical")] 37, and Zig exposes functions via export fn modify_categorical(...) 28, the resulting symbols adhere to the standard C calling conventions, providing a stable foundation for the ctypes wrapper.70</p>
+<h2 id="5-the-dynamic-loading-architecture-for-arrow-in-place-memory"><strong>5. The Dynamic Loading Architecture for Arrow In-Place Memory</strong></h2>
+<p>The crux of the analytical workflow requires the native library to modify a Pandas Categorical array in-place. Passing multi-dimensional array pointers natively between Python memory and native memory is historically fraught with serialization overhead, reference counting issues, and segmentation faults.1<br />
+The implementation of the Apache Arrow C Data Interface revolutionizes this process. The interface permits zero-copy sharing of Arrow memory between Python data frames (Pandas, Polars, PyArrow) and independent compiled runtimes (Zig, NativeAOT).1</p>
+<h3 id="51-arrow-c-data-interface-data-structures"><strong>5.1 Arrow C Data Interface Data Structures</strong></h3>
+<p>The Arrow C Data Interface relies on two fundamental C structs to communicate memory layout and types: ArrowSchema and ArrowArray.1<br />
+The ArrowSchema defines the format, indicating dictionary-encoded string categoricals, variable-length lists, or primitive types, alongside any relevant schema metadata.1 The ArrowArray structure acts as the core memory container, containing pointers to the exact length, null count, internal offsets, and the contiguous memory buffers (including the validity bitmap, offset array, and data array).1<br />
+When the Zig or C# native layer modifies the Pandas array, it accepts a pointer to the ArrowArray, decoding the structure and accessing the buffers double-pointer array directly. By writing directly to these buffers, memory is altered in-place with zero serialization latency, entirely bypassing the Python interpreter and the GIL.1</p>
+<h3 id="52-the-pycapsule-protocol-and-safety-mechanisms"><strong>5.2 The PyCapsule Protocol and Safety Mechanisms</strong></h3>
+<p>Historically, exposing these C structures to Python involved passing raw integer representations of the void* pointers via ctypes.9 However, raw pointers bypass Python's garbage collection. If an exception interrupts the Python execution context before the native memory is freed, the memory leaks permanently, compromising long-running data science workloads.76<br />
+The modern standard dictates the use of the Arrow PyCapsule Interface, directly inspired by the DLPack specification.9 A PyCapsule is a standard Python C-API object designed specifically to hold an opaque void* pointer and carry a strongly bound C-level destructor callback.9</p>
+<h4 id="521-constructing-the-pycapsule-at-the-native-boundary"><strong>5.2.1 Constructing the PyCapsule at the Native Boundary</strong></h4>
+<p>To export data securely, the Zig or C# native layer must not return an integer pointer. Instead, it must utilize the Python C-API to instantiate a PyCapsule. The architecture dictates that the native extension links against libpython (or uses ctypes.pythonapi from the Python side) to invoke PyCapsule_New.9</p>
+<ol>
+<li><strong>Allocation:</strong> The native layer allocates an ArrowArray struct on the heap, populating it with the generated categorical data.1  </li>
+<li><strong>Naming Convention:</strong> The capsule must be instantiated with a strictly defined name constraint. For an ArrowArray, the name must be exactly "arrow_array".9 This string acts as an embedded type-check, ensuring consumers do not accidentally cast a schema pointer into an array struct.9  </li>
+<li><strong>Destructor Binding:</strong> The PyCapsule_New call binds a function pointer to a destructor.9 If the Python object wrapping the capsule is garbage-collected without the Arrow data being fully consumed by the target dataframe, the destructor automatically evaluates the ArrowArray-&gt;release callback.9 This ensures the native heap memory is cleanly deallocated, eliminating the memory leak risk entirely.79</li>
+</ol>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Struct Type</th>
+<th style="text-align: left;">Required PyCapsule Name</th>
+<th style="text-align: left;">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">ArrowSchema</td>
+<td style="text-align: left;">"arrow_schema"</td>
+<td style="text-align: left;">Describes the data types (e.g., dictionary types for Pandas categoricals).9</td>
+</tr>
+<tr>
+<td style="text-align: left;">ArrowArray</td>
+<td style="text-align: left;">"arrow_array"</td>
+<td style="text-align: left;">Houses the exact memory buffer pointers holding the columnar data.9</td>
+</tr>
+<tr>
+<td style="text-align: left;">ArrowArrayStream</td>
+<td style="text-align: left;">"arrow_array_stream"</td>
+<td style="text-align: left;">Allows chunked, sequential iteration of datasets exceeding available RAM.9</td>
+</tr>
+</tbody>
+</table>
+<h4 id="522-consuming-pycapsules-in-python"><strong>5.2.2 Consuming PyCapsules in Python</strong></h4>
+<p>On the Python side, the module structure intercepts the returned PyCapsule. Any modern data frame library compatible with the Arrow ecosystem (including Pandas 2.2+, Polars, and PyArrow) natively understands these PyCapsules through standard Dunder methods.76<br />
+By defining a lightweight Python wrapper class that exposes the __arrow_c_array__ method, the native extension can yield objects that integrate flawlessly into the Python data science stack.76<br />
+When a library like Polars or Narwhals receives this PyCapsule, it internally calls PyCapsule_GetPointer(capsule, "arrow_array") to validate the type name and extract the memory structure safely.9 It then assumes ownership of the memory, subsequently renaming the capsule or nullifying the release callback to prevent double-free corruption, and finally invoking the internal release callback once the Python runtime concludes operations on the dataframe.9<br />
+This implementation shields the end-user entirely from the underlying mechanics of memory management, pointer casting, and cross-boundary FFI invocations.75 Data scientists only interact with Python native objects, calling familiar analytical functions, while the compiled extension securely mutates categorical arrays at the execution speed of the underlying Zig or C# runtime.</p>
+<h2 id="6-strategic-synthesis"><strong>6. Strategic Synthesis</strong></h2>
+<p>Distributing natively compiled, memory-safe extensions within standard Python workflows demands a rigorously defined integration pipeline. By architecting a custom setuptools build command, the deployment framework effortlessly abstracts away the inherent complexities of the Zig compiler and the.NET ILCompiler, executing zig build-lib or dotnet publish as native subroutines fully integrated into the PEP 517 lifecycle.<br />
+Continuous Integration orchestration via cibuildwheel, operating on GitHub Actions matrix runners, provides deterministic, cross-platform wheel generation. By utilizing CIBW_BEFORE_ALL within manylinux containers to inject non-standard toolchains, and carefully navigating glibc compatibility requirements by adopting the manylinux_2_28 standard for C# NativeAOT, the pipeline produces pristine artifacts. These artifacts install universally via pip across Windows, macOS, and Linux without necessitating user-side compilation.<br />
+At runtime, robust location strategies combined with the Arrow PyCapsule Interface establish a profoundly secure, zero-copy conduit between the Python runtime and the high-performance Zig or C# core. This holistic architectural pattern eliminates traditional FFI serialization bottlenecks, safeguards against memory leakage, and ensures that sophisticated data science tooling can be deployed with unparalleled efficiency and stability.</p>
+<h4 id="works-cited"><strong>Works cited</strong></h4>
+<ol>
+<li>The Arrow C data interface — Apache Arrow v24.0.0, accessed on May 7, 2026, <a href="https://arrow.apache.org/docs/format/CDataInterface.html">https://arrow.apache.org/docs/format/CDataInterface.html</a>  </li>
+<li>Updating Extension Modules - Python Free-Threading Guide, accessed on May 7, 2026, <a href="https://py-free-threading.github.io/porting-extensions/">https://py-free-threading.github.io/porting-extensions/</a>  </li>
+<li>Interfacing Python with C/C++ for Performance (2024), accessed on May 7, 2026, <a href="https://www.paulnorvig.com/guides/interfacing-python-with-cc-for-performance.html">https://www.paulnorvig.com/guides/interfacing-python-with-cc-for-performance.html</a>  </li>
+<li>Learning Zig and Zig Build by porting Piper's CMakeLists.txt - Compile and Run, accessed on May 7, 2026, <a href="https://compileandrun.com/zig-build-cargo-piper/">https://compileandrun.com/zig-build-cargo-piper/</a>  </li>
+<li>Automatically generate a python package that wraps your .NET AOT project - Reddit, accessed on May 7, 2026, <a href="https://www.reddit.com/r/dotnet/comments/1mtm063/automatically_generate_a_python_package_that/">https://www.reddit.com/r/dotnet/comments/1mtm063/automatically_generate_a_python_package_that/</a>  </li>
+<li>How do I use scikit-build to compile an extension module as part of another setup.py, accessed on May 7, 2026, <a href="https://stackoverflow.com/questions/57518795/how-do-i-use-scikit-build-to-compile-an-extension-module-as-part-of-another-setu">https://stackoverflow.com/questions/57518795/how-do-i-use-scikit-build-to-compile-an-extension-module-as-part-of-another-setu</a>  </li>
+<li>Sharing libraries between wheels documentation - Read the Docs, accessed on May 7, 2026, <a href="https://native-lib-loader.readthedocs.io/en/latest/">https://native-lib-loader.readthedocs.io/en/latest/</a>  </li>
+<li>setuptools-zig - PyPI, accessed on May 7, 2026, <a href="https://pypi.org/project/setuptools-zig/">https://pypi.org/project/setuptools-zig/</a>  </li>
+<li>The Arrow PyCapsule Interface — Apache Arrow v24.0.0, accessed on May 7, 2026, <a href="https://arrow.apache.org/docs/format/CDataInterface/PyCapsuleInterface.html">https://arrow.apache.org/docs/format/CDataInterface/PyCapsuleInterface.html</a>  </li>
+<li>Build procedure - scikit-build-core 0.12.2 documentation - Read the Docs, accessed on May 7, 2026, <a href="https://scikit-build-core.readthedocs.io/en/stable/guide/build.html">https://scikit-build-core.readthedocs.io/en/stable/guide/build.html</a>  </li>
+<li>GitHub - pypa/cibuildwheel: Build Python wheels for all the platforms with minimal configuration., accessed on May 7, 2026, <a href="https://github.com/pypa/cibuildwheel">https://github.com/pypa/cibuildwheel</a>  </li>
+<li>GitHub - scikit-build/scikit-build-core: A next generation Python CMake adaptor and Python API for plugins, accessed on May 7, 2026, <a href="https://github.com/scikit-build/scikit-build-core">https://github.com/scikit-build/scikit-build-core</a>  </li>
+<li>Zig + Python Easy &amp; Optimized - Nicola Landro, accessed on May 7, 2026, <a href="https://z-uo.medium.com/zig-python-easy-optimized-f64341625d04">https://z-uo.medium.com/zig-python-easy-optimized-f64341625d04</a>  </li>
+<li>Zig Build - Zig Guide, accessed on May 7, 2026, <a href="https://zig.guide/build-system/zig-build/">https://zig.guide/build-system/zig-build/</a>  </li>
+<li>Zig Build System - Zig Programming Language, accessed on May 7, 2026, <a href="https://ziglang.org/learn/build-system/">https://ziglang.org/learn/build-system/</a>  </li>
+<li>Zig Build System Basics - Media - Ziggit, accessed on May 7, 2026, <a href="https://ziggit.dev/t/zig-build-system-basics/10275">https://ziggit.dev/t/zig-build-system-basics/10275</a>  </li>
+<li>writing Python modules in Zig - Reddit, accessed on May 7, 2026, <a href="https://www.reddit.com/r/Zig/comments/k2bv2j/writing_python_modules_in_zig/">https://www.reddit.com/r/Zig/comments/k2bv2j/writing_python_modules_in_zig/</a>  </li>
+<li>Packaging Zig as Python packages - Help - Ziggit, accessed on May 7, 2026, <a href="https://ziggit.dev/t/packaging-zig-as-python-packages/7084">https://ziggit.dev/t/packaging-zig-as-python-packages/7084</a>  </li>
+<li>zig cc as a drop-in CC= replacement for Python extension builds · GitHub, accessed on May 7, 2026, <a href="https://github.com/cemrehancavdar/zig-cc-python">https://github.com/cemrehancavdar/zig-cc-python</a>  </li>
+<li>ziglang - PyPI, accessed on May 7, 2026, <a href="https://pypi.org/project/ziglang/">https://pypi.org/project/ziglang/</a>  </li>
+<li>scikit-build-core/docs/guide/getting_started.md at main - GitHub, accessed on May 7, 2026, <a href="https://github.com/scikit-build/scikit-build-core/blob/main/docs/guide/getting_started.md?plain=true">https://github.com/scikit-build/scikit-build-core/blob/main/docs/guide/getting_started.md?plain=true</a>  </li>
+<li>Welcome to scikit-build — scikit-build 0.1.dev50+g6c016fd91 documentation, accessed on May 7, 2026, <a href="https://scikit-build.readthedocs.io/">https://scikit-build.readthedocs.io/</a>  </li>
+<li>Building Extension Modules - setuptools 82.0.1 documentation, accessed on May 7, 2026, <a href="https://setuptools.pypa.io/en/latest/userguide/ext_modules.html">https://setuptools.pypa.io/en/latest/userguide/ext_modules.html</a>  </li>
+<li>Extending or Customizing Setuptools, accessed on May 7, 2026, <a href="https://setuptools.pypa.io/en/latest/userguide/extension.html">https://setuptools.pypa.io/en/latest/userguide/extension.html</a>  </li>
+<li>codelv/py.zig: Lightweight python bindings for zig - GitHub, accessed on May 7, 2026, <a href="https://github.com/codelv/py.zig">https://github.com/codelv/py.zig</a>  </li>
+<li>python setuptools with many commands : r/learnpython - Reddit, accessed on May 7, 2026, <a href="https://www.reddit.com/r/learnpython/comments/14mvmbh/python_setuptools_with_many_commands/">https://www.reddit.com/r/learnpython/comments/14mvmbh/python_setuptools_with_many_commands/</a>  </li>
+<li>Python setuptools/distutils custom build for the `extra` package with Makefile, accessed on May 7, 2026, <a href="https://stackoverflow.com/questions/41169711/python-setuptools-distutils-custom-build-for-the-extra-package-with-makefile">https://stackoverflow.com/questions/41169711/python-setuptools-distutils-custom-build-for-the-extra-package-with-makefile</a>  </li>
+<li>compile CPython extension written in Zig on Windows - Stack Overflow, accessed on May 7, 2026, <a href="https://stackoverflow.com/questions/77466479/compile-cpython-extension-written-in-zig-on-windows">https://stackoverflow.com/questions/77466479/compile-cpython-extension-written-in-zig-on-windows</a>  </li>
+<li>.NET Native AOT Explained - NDepend Blog, accessed on May 7, 2026, <a href="https://blog.ndepend.com/net-native-aot-explained/">https://blog.ndepend.com/net-native-aot-explained/</a>  </li>
+<li>How to Enable Native AOT in .NET 8: A Step-by-Step Guide with Performance Benchmark, accessed on May 7, 2026, <a href="https://www.avidclan.com/blog/how-to-enable-native-aot-in-dot-net-8-a-step-by-step-guide-with-performance-benchmark/">https://www.avidclan.com/blog/how-to-enable-native-aot-in-dot-net-8-a-step-by-step-guide-with-performance-benchmark/</a>  </li>
+<li>Native AOT Deployment Model in dotNet | by Funda Özmen | adessoTurkey - Medium, accessed on May 7, 2026, <a href="https://medium.com/adessoturkey/native-aot-deployment-model-in-dotnet-e2dd341cf2e0">https://medium.com/adessoturkey/native-aot-deployment-model-in-dotnet-e2dd341cf2e0</a>  </li>
+<li>Mastering .NET Native AOT: Benefits and Examples | by Juan España - Medium, accessed on May 7, 2026, <a href="https://medium.com/bytehide/mastering-net-native-aot-benefits-and-examples-d41290e74ff8">https://medium.com/bytehide/mastering-net-native-aot-benefits-and-examples-d41290e74ff8</a>  </li>
+<li>Using .NET Native AOT to build Windows WinAPI Dlls - Rick Strahl's Web Log, accessed on May 7, 2026, <a href="https://weblog.west-wind.com/posts/2026/Apr/28/Using-NET-Native-AOT-to-build-Windows-WinAPI-Dlls">https://weblog.west-wind.com/posts/2026/Apr/28/Using-NET-Native-AOT-to-build-Windows-WinAPI-Dlls</a>  </li>
+<li>Native AOT deployment overview - .NET | Microsoft Learn, accessed on May 7, 2026, <a href="https://learn.microsoft.com/en-us/dotnet/core/deploying/native-aot/">https://learn.microsoft.com/en-us/dotnet/core/deploying/native-aot/</a>  </li>
+<li>Native AOT in .NET: Smaller, Faster Apps for the Real World | by Faisal Iqbal - Medium, accessed on May 7, 2026, <a href="https://medium.com/@faysalwrites/native-aot-in-net-smaller-faster-apps-for-the-real-world-610caa77a8a4">https://medium.com/@faysalwrites/native-aot-in-net-smaller-faster-apps-for-the-real-world-610caa77a8a4</a>  </li>
+<li>Demystifying .NET Native AOT: An Engineer's Implementation Guide - Medium, accessed on May 7, 2026, <a href="https://medium.com/codex/demystifying-net-native-aot-an-engineers-implementation-guide-cc204c713113">https://medium.com/codex/demystifying-net-native-aot-an-engineers-implementation-guide-cc204c713113</a>  </li>
+<li>Create and consume custom frameworks for iOS-like platforms - .NET - Microsoft Learn, accessed on May 7, 2026, <a href="https://learn.microsoft.com/en-us/dotnet/core/deploying/native-aot/ios-like-platforms/creating-and-consuming-custom-frameworks">https://learn.microsoft.com/en-us/dotnet/core/deploying/native-aot/ios-like-platforms/creating-and-consuming-custom-frameworks</a>  </li>
+<li>Automatically generate a python package that wraps your .NET AOT project - Reddit, accessed on May 7, 2026, <a href="https://www.reddit.com/r/csharp/comments/1mto3jv/automatically_generate_a_python_package_that/">https://www.reddit.com/r/csharp/comments/1mto3jv/automatically_generate_a_python_package_that/</a>  </li>
+<li>Tutorial: Publish an ASP.NET Core app using Native AOT | Microsoft Learn, accessed on May 7, 2026, <a href="https://learn.microsoft.com/en-us/aspnet/core/fundamentals/aot/native-aot-tutorial?view=aspnetcore-10.0">https://learn.microsoft.com/en-us/aspnet/core/fundamentals/aot/native-aot-tutorial?view=aspnetcore-10.0</a>  </li>
+<li>Platform compatibility tags - Python Packaging User Guide, accessed on May 7, 2026, <a href="https://packaging.python.org/specifications/platform-compatibility-tags/">https://packaging.python.org/specifications/platform-compatibility-tags/</a>  </li>
+<li>NET Runtime Identifier (RID) catalog - Microsoft Learn, accessed on May 7, 2026, <a href="https://learn.microsoft.com/en-us/dotnet/core/rid-catalog">https://learn.microsoft.com/en-us/dotnet/core/rid-catalog</a>  </li>
+<li>Cross-compilation - .NET | Microsoft Learn, accessed on May 7, 2026, <a href="https://learn.microsoft.com/en-us/dotnet/core/deploying/native-aot/cross-compile">https://learn.microsoft.com/en-us/dotnet/core/deploying/native-aot/cross-compile</a>  </li>
+<li>Publish .NET 8 service as native (AOT) inside docker - Stack Overflow, accessed on May 7, 2026, <a href="https://stackoverflow.com/questions/77781280/publish-net-8-service-as-native-aot-inside-docker">https://stackoverflow.com/questions/77781280/publish-net-8-service-as-native-aot-inside-docker</a>  </li>
+<li>cibuildwheel/examples/github-deploy.yml at main, accessed on May 7, 2026, <a href="https://github.com/pypa/cibuildwheel/blob/main/examples/github-deploy.yml">https://github.com/pypa/cibuildwheel/blob/main/examples/github-deploy.yml</a>  </li>
+<li>cibuildwheel, accessed on May 7, 2026, <a href="https://cibuildwheel.pypa.io/">https://cibuildwheel.pypa.io/</a>  </li>
+<li>Platforms - cibuildwheel, accessed on May 7, 2026, <a href="https://cibuildwheel.pypa.io/en/stable/platforms/">https://cibuildwheel.pypa.io/en/stable/platforms/</a>  </li>
+<li>Setup - cibuildwheel, accessed on May 7, 2026, <a href="https://cibuildwheel.pypa.io/en/v2.22.0/setup/">https://cibuildwheel.pypa.io/en/v2.22.0/setup/</a>  </li>
+<li>Tips and tricks - cibuildwheel, accessed on May 7, 2026, <a href="https://cibuildwheel.pypa.io/en/stable/faq/">https://cibuildwheel.pypa.io/en/stable/faq/</a>  </li>
+<li>Options - cibuildwheel, accessed on May 7, 2026, <a href="https://cibuildwheel.pypa.io/en/stable/options/">https://cibuildwheel.pypa.io/en/stable/options/</a>  </li>
+<li>Install .NET on Linux by using an install script or by extracting binaries - Microsoft Learn, accessed on May 7, 2026, <a href="https://learn.microsoft.com/en-us/dotnet/core/install/linux-scripted-manual">https://learn.microsoft.com/en-us/dotnet/core/install/linux-scripted-manual</a>  </li>
+<li>Installation | zig.guide, accessed on May 7, 2026, <a href="https://zig.guide/getting-started/installation/">https://zig.guide/getting-started/installation/</a>  </li>
+<li>GitHub - marler8997/zigbuild: Tools and resources to build/update the zig compiler, accessed on May 7, 2026, <a href="https://github.com/marler8997/zigbuild">https://github.com/marler8997/zigbuild</a>  </li>
+<li>Trying to statically link libc with NativeAOT causes a fatal crash in the linker · Issue #100230 · dotnet/runtime - GitHub, accessed on May 7, 2026, <a href="https://github.com/dotnet/runtime/issues/100230">https://github.com/dotnet/runtime/issues/100230</a>  </li>
+<li>MichalStrehovsky/PublishAotCross: NuGet package to help you cross-compile Native AOT to different OSes/architectures - GitHub, accessed on May 7, 2026, <a href="https://github.com/MichalStrehovsky/PublishAotCross">https://github.com/MichalStrehovsky/PublishAotCross</a>  </li>
+<li>pypa/manylinux: Python wheels that work on any linux (almost) - GitHub, accessed on May 7, 2026, <a href="https://github.com/pypa/manylinux">https://github.com/pypa/manylinux</a>  </li>
+<li>Distribution - Maturin User Guide, accessed on May 7, 2026, <a href="https://www.maturin.rs/distribution.html">https://www.maturin.rs/distribution.html</a>  </li>
+<li>Theory of "target-triple" and how to run Zig on "POSIX-compliant" system - Explain - Ziggit, accessed on May 7, 2026, <a href="https://ziggit.dev/t/theory-of-target-triple-and-how-to-run-zig-on-posix-compliant-system/12411">https://ziggit.dev/t/theory-of-target-triple-and-how-to-run-zig-on-posix-compliant-system/12411</a>  </li>
+<li>How to use `manylinux_2_34`? · pypa cibuildwheel · Discussion #2129 - GitHub, accessed on May 7, 2026, <a href="https://github.com/pypa/cibuildwheel/discussions/2129">https://github.com/pypa/cibuildwheel/discussions/2129</a>  </li>
+<li>Wheel depending on shared library from another wheel - Packaging - Python Discussions, accessed on May 7, 2026, <a href="https://discuss.python.org/t/wheel-depending-on-shared-library-from-another-wheel/26456">https://discuss.python.org/t/wheel-depending-on-shared-library-from-another-wheel/26456</a>  </li>
+<li>Packaging C/CPP libraries as wheels - Python discussion forum, accessed on May 7, 2026, <a href="https://discuss.python.org/t/packaging-c-cpp-libraries-as-wheels/90183">https://discuss.python.org/t/packaging-c-cpp-libraries-as-wheels/90183</a>  </li>
+<li>Python wheels manylinux build · Actions · GitHub Marketplace, accessed on May 7, 2026, <a href="https://github.com/marketplace/actions/python-wheels-manylinux-build">https://github.com/marketplace/actions/python-wheels-manylinux-build</a>  </li>
+<li>How to include external library with python wheel package - Stack Overflow, accessed on May 7, 2026, <a href="https://stackoverflow.com/questions/23916186/how-to-include-external-library-with-python-wheel-package">https://stackoverflow.com/questions/23916186/how-to-include-external-library-with-python-wheel-package</a>  </li>
+<li>What is the right way to ship dynamic library *.so with python package? - Stack Overflow, accessed on May 7, 2026, <a href="https://stackoverflow.com/questions/68664839/what-is-the-right-way-to-ship-dynamic-library-so-with-python-package">https://stackoverflow.com/questions/68664839/what-is-the-right-way-to-ship-dynamic-library-so-with-python-package</a>  </li>
+<li>.NET 7 introduces Native AOT | Hacker News, accessed on May 7, 2026, <a href="https://news.ycombinator.com/item?id=31431387">https://news.ycombinator.com/item?id=31431387</a>  </li>
+<li>Using shared libraries - meson-python, accessed on May 7, 2026, <a href="https://mesonbuild.com/meson-python/how-to-guides/shared-libraries.html">https://mesonbuild.com/meson-python/how-to-guides/shared-libraries.html</a>  </li>
+<li>Native dependencies in other wheels -- how I do it, but maybe we can standardize something? - Packaging - Python Discussions, accessed on May 7, 2026, <a href="https://discuss.python.org/t/native-dependencies-in-other-wheels-how-i-do-it-but-maybe-we-can-standardize-something/23913">https://discuss.python.org/t/native-dependencies-in-other-wheels-how-i-do-it-but-maybe-we-can-standardize-something/23913</a>  </li>
+<li>Python setuptools build c library, access via cdll.LoadLibrary - Arch Linux Forums, accessed on May 7, 2026, <a href="https://bbs.archlinux.org/viewtopic.php?id=268884">https://bbs.archlinux.org/viewtopic.php?id=268884</a>  </li>
+<li>importlib.resources – Package resource reading, opening and access — Python 3.14.5rc1 documentation, accessed on May 7, 2026, <a href="https://docs.python.org/3/library/importlib.resources.html">https://docs.python.org/3/library/importlib.resources.html</a>  </li>
+<li>Python ctypes: loading DLL from from a relative path - Stack Overflow, accessed on May 7, 2026, <a href="https://stackoverflow.com/questions/2980479/python-ctypes-loading-dll-from-from-a-relative-path">https://stackoverflow.com/questions/2980479/python-ctypes-loading-dll-from-from-a-relative-path</a>  </li>
+<li>ctypes — A foreign function library for Python — Python 3.14.5rc1 documentation, accessed on May 7, 2026, <a href="https://docs.python.org/3/library/ctypes.html">https://docs.python.org/3/library/ctypes.html</a>  </li>
+<li>Extending Python With C Libraries and the “ctypes” Module – dbader.org, accessed on May 7, 2026, <a href="https://dbader.org/blog/python-ctypes-tutorial">https://dbader.org/blog/python-ctypes-tutorial</a>  </li>
+<li>Python Ctypes for Loading and Calling Shared Libraries - DEV Community, accessed on May 7, 2026, <a href="https://dev.to/yushulx/python-ctypes-for-loading-and-calling-shared-libraries-49n7">https://dev.to/yushulx/python-ctypes-for-loading-and-calling-shared-libraries-49n7</a>  </li>
+<li>C Class Instance from Void Pointer using Ctypes - Stack Overflow, accessed on May 7, 2026, <a href="https://stackoverflow.com/questions/19389124/c-class-instance-from-void-pointer-using-ctypes">https://stackoverflow.com/questions/19389124/c-class-instance-from-void-pointer-using-ctypes</a>  </li>
+<li>Python C Extension Exposing a Capsule to ctypes in order to use third party C code, accessed on May 7, 2026, <a href="https://stackoverflow.com/questions/59887319/python-c-extension-exposing-a-capsule-to-ctypes-in-order-to-use-third-party-c-co">https://stackoverflow.com/questions/59887319/python-c-extension-exposing-a-capsule-to-ctypes-in-order-to-use-third-party-c-co</a>  </li>
+<li>Leveraging the Arrow C Data Interface - Will Ayd | Personal Blog, accessed on May 7, 2026, <a href="https://willayd.com/leveraging-the-arrow-c-data-interface.html">https://willayd.com/leveraging-the-arrow-c-data-interface.html</a>  </li>
+<li>Universal dataframe support with the Arrow PyCapsule Interface + Narwhals | Labs, accessed on May 7, 2026, <a href="https://labs.quansight.org/blog/narwhals-pycapsule">https://labs.quansight.org/blog/narwhals-pycapsule</a>  </li>
+<li>[Python] Add Python protocol for the Arrow C (Data/Stream) Interface #35531 - GitHub, accessed on May 7, 2026, <a href="https://github.com/apache/arrow/issues/35531">https://github.com/apache/arrow/issues/35531</a>  </li>
+<li>Capsules — Python 3.14.4 documentation, accessed on May 7, 2026, <a href="https://docs.python.org/3/c-api/capsule.html">https://docs.python.org/3/c-api/capsule.html</a>  </li>
+<li>[Python] Use PyCapsule for communicating C Data Interface pointers at the Python level · Issue #34031 · apache/arrow - GitHub, accessed on May 7, 2026, <a href="https://github.com/apache/arrow/issues/34031">https://github.com/apache/arrow/issues/34031</a></li>
+</ol>
+          </article>
+        </div>
+      </main>
+
+      <footer class="site-footer">
+        <div class="footer-inner">
+          <div>zh_catmut: native LUT remapping for large Pandas categorical code buffers.</div>
+          <div class="footer-links">
+            <a href="docs.html">Docs</a>
+            <a href="architecture.html">Architecture</a>
+            <a href="index.html">Landing</a>
+          </div>
+        </div>
+      </footer>
+    </div>
+    <script src="assets/js/site.js"></script>
+    
+  </body>
+</html>

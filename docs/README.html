@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Project documentation index for zh_catmut.">
+    <title>zh_catmut | Project Readme</title>
+    <link rel="stylesheet" href="assets/css/site.css">
+    <style>
+      .md-article h1{font-size:2.2rem;margin:2.2rem 0 1rem}
+      .md-article h2{font-size:1.6rem;margin:2rem 0 0.8rem;color:var(--python)}
+      .md-article h3{font-size:1.25rem;margin:1.4rem 0 0.6rem;color:var(--cyan)}
+      .md-article p{line-height:1.75;margin:0.8rem 0}
+      .md-article ul,.md-article ol{margin:0.8rem 0;padding-left:1.4rem}
+      .md-article li{margin:0.35rem 0}
+      .md-article code{background:rgba(255,255,255,0.06);padding:0.15rem 0.4rem;border-radius:6px;font-size:0.92em}
+      .md-article pre{background:rgba(0,0,0,0.35);border:1px solid var(--line);border-radius:14px;padding:1.1rem 1.3rem;overflow-x:auto}
+      .md-article pre code{background:none;padding:0}
+      .md-article table{width:100%;border-collapse:collapse;margin:1rem 0}
+      .md-article th,.md-article td{padding:0.6rem 0.8rem;border:1px solid var(--line);text-align:left}
+      .md-article th{background:rgba(255,255,255,0.05)}
+      .md-article blockquote{border-left:3px solid var(--violet);padding-left:1rem;margin:1rem 0;color:var(--muted)}
+      .md-article a{color:var(--python);text-decoration:underline;text-underline-offset:3px}
+      .md-article hr{border:none;border-top:1px solid var(--line);margin:2rem 0}
+      .md-article .toc{background:rgba(13,20,35,0.6);border:1px solid var(--line);border-radius:16px;padding:1.2rem 1.6rem;margin:1.2rem 0}
+      .md-article .toc ul{list-style:none;padding-left:0}
+      .md-article .toc li{margin:0.3rem 0}
+      .md-article .toc a{color:var(--muted);text-decoration:none}
+      .md-article .toc a:hover{color:var(--text)}
+      .mermaid{background:rgba(0,0,0,0.2);border-radius:14px;padding:1rem}
+    </style>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <canvas class="particle-canvas" data-particles aria-hidden="true"></canvas>
+    <div class="site-shell">
+      <header class="nav">
+        <div class="nav-inner">
+          <a class="brand" href="index.html" aria-label="zh_catmut home">
+            <span class="brand-mark" aria-hidden="true"></span>
+            <span class="brand-text">
+              <span class="brand-name">zh_catmut</span>
+              <span class="brand-subtitle">docs</span>
+            </span>
+          </a>
+          <button class="nav-toggle" type="button" data-nav-toggle aria-label="Toggle navigation" aria-expanded="false"><span></span></button>
+          <nav class="nav-links" aria-label="Primary navigation">
+            <a href="index.html">Landing</a>
+            <a href="docs.html">Docs</a>
+            <a href="architecture.html">Architecture</a>
+            <a href="https://github.com/mohamedhossammohamed/zh_catmut" target="_blank" rel="noopener">GitHub</a>
+          </nav>
+        </div>
+      </header>
+
+      <main id="main">
+        <section class="page-hero">
+          <div class="container">
+            <div class="reveal">
+              <p class="eyebrow"><span class="eyebrow-dot"></span>Documentation index</p>
+              <h1>Project Readme</h1>
+              <p>Organized technical documentation for the high-performance Pandas categorical mutation native extension.</p>
+            </div>
+          </div>
+        </section>
+
+        <div class="container docs-layout">
+          <aside class="docs-sidebar reveal" aria-label="Documentation contents">
+            <strong>Contents</strong>
+            <nav>
+              
+            </nav>
+          </aside>
+
+          <article class="doc-article md-article">
+            <h1 id="project-documentation">Project Documentation</h1>
+<p>This directory contains the organized technical documentation for the high-performance
+Pandas categorical mutation native extension project. The architecture bridges Python
+with modern systems languages (Zig and C# NativeAOT) to enable zero-copy, SIMD-accelerated
+in-place mutation of massive categorical DataFrames.</p>
+<h2 id="documentation-index">Documentation Index</h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Document</th>
+<th>Focus Area</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><a href="01-categorical-internals-and-memory.html">01-categorical-internals-and-memory.md</a></td>
+<td>Pandas categorical internals, memory layout, and the object-mode fallback bottleneck</td>
+</tr>
+<tr>
+<td>2</td>
+<td><a href="02-ffi-zero-copy-architecture.html">02-ffi-zero-copy-architecture.md</a></td>
+<td>FFI boundary design, C-ABI safety, buffer protocol, and zero-copy mutation mechanics</td>
+</tr>
+<tr>
+<td>3</td>
+<td><a href="03-performance-algorithms.html">03-performance-algorithms.md</a></td>
+<td>SIMD optimization, CPU cache locality, multi-threading, and lookup table strategies</td>
+</tr>
+<tr>
+<td>4</td>
+<td><a href="04-build-systems-and-distribution.html">04-build-systems-and-distribution.md</a></td>
+<td>Build systems, CI/CD pipelines, cross-platform wheel distribution, and Arrow PyCapsules</td>
+</tr>
+</tbody>
+</table>
+<h2 id="architecture-overview">Architecture Overview</h2>
+<p>The system is designed to solve the critical bottleneck of merging or relabeling
+categorical columns in Pandas DataFrames exceeding 100 million rows. The standard
+Python/NumPy execution path triggers catastrophic memory inflation (object-mode fallback)
+that can increase memory usage from ~100 MB to 5-10 GB.</p>
+<h3 id="core-architectural-layers">Core Architectural Layers</h3>
+<ol>
+<li><strong>Data Layer</strong> — Pandas Categorical internals, BlockManager, and Arrow C Data Interface</li>
+<li><strong>Boundary Layer</strong> — Foreign Function Interface (FFI) via C-ABI with zero-copy pointer handoff</li>
+<li><strong>Compute Layer</strong> — Native algorithms in Zig / C# NativeAOT utilizing SIMD (AVX-512/NEON) and multi-threading</li>
+<li><strong>Packaging Layer</strong> — PEP 517 build backends, cibuildwheel CI matrices, and manylinux-compatible wheels</li>
+<li><strong>Runtime Layer</strong> — Dynamic library loading, PyCapsule memory safety, and CoW-compliant reintegration</li>
+</ol>
+<h3 id="key-design-principles">Key Design Principles</h3>
+<ul>
+<li><strong>Zero-Copy Mutation:</strong> Pass raw memory pointers across the FFI boundary without serialization or duplication</li>
+<li><strong>GIL Bypass:</strong> Release the Python Global Interpreter Lock during native execution to maximize throughput</li>
+<li><strong>Memory Safety:</strong> Use Apache Arrow PyCapsules with bound destructors to prevent unmanaged memory leaks</li>
+<li><strong>CoW Compliance:</strong> Respect Pandas 3.0 Copy-on-Write semantics via <code>pd.Categorical.from_codes()</code> reintegration</li>
+<li><strong>Frictionless Distribution:</strong> Pre-compile wheels for Linux, macOS, and Windows via GitHub Actions + cibuildwheel</li>
+</ul>
+<h2 id="reading-order">Reading Order</h2>
+<p>For engineers new to the codebase, the recommended reading order is:</p>
+<ol>
+<li><strong>01-categorical-internals-and-memory.md</strong> — Understand <em>why</em> the problem exists</li>
+<li><strong>02-ffi-zero-copy-architecture.md</strong> — Understand <em>how</em> we cross the language boundary safely</li>
+<li><strong>03-performance-algorithms.md</strong> — Understand <em>how</em> we maximize CPU throughput</li>
+<li><strong>04-build-systems-and-distribution.md</strong> — Understand <em>how</em> we package and ship the native binaries</li>
+</ol>
+<h2 id="raw-source-files">Raw Source Files</h2>
+<p>All original drafts and alternative versions are preserved in the <a href="raw/"><code>raw/</code></a> directory
+for reference. This includes early build-system drafts and the unformatted source export.</p>
+          </article>
+        </div>
+      </main>
+
+      <footer class="site-footer">
+        <div class="footer-inner">
+          <div>zh_catmut: native LUT remapping for large Pandas categorical code buffers.</div>
+          <div class="footer-links">
+            <a href="docs.html">Docs</a>
+            <a href="architecture.html">Architecture</a>
+            <a href="index.html">Landing</a>
+          </div>
+        </div>
+      </footer>
+    </div>
+    <script src="assets/js/site.js"></script>
+    
+  </body>
+</html>

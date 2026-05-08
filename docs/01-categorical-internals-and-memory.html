@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Pandas categorical internals, memory layout, and object-mode fallback bottleneck.">
+    <title>zh_catmut | Categorical Internals & Memory</title>
+    <link rel="stylesheet" href="assets/css/site.css">
+    <style>
+      .md-article h1{font-size:2.2rem;margin:2.2rem 0 1rem}
+      .md-article h2{font-size:1.6rem;margin:2rem 0 0.8rem;color:var(--python)}
+      .md-article h3{font-size:1.25rem;margin:1.4rem 0 0.6rem;color:var(--cyan)}
+      .md-article p{line-height:1.75;margin:0.8rem 0}
+      .md-article ul,.md-article ol{margin:0.8rem 0;padding-left:1.4rem}
+      .md-article li{margin:0.35rem 0}
+      .md-article code{background:rgba(255,255,255,0.06);padding:0.15rem 0.4rem;border-radius:6px;font-size:0.92em}
+      .md-article pre{background:rgba(0,0,0,0.35);border:1px solid var(--line);border-radius:14px;padding:1.1rem 1.3rem;overflow-x:auto}
+      .md-article pre code{background:none;padding:0}
+      .md-article table{width:100%;border-collapse:collapse;margin:1rem 0}
+      .md-article th,.md-article td{padding:0.6rem 0.8rem;border:1px solid var(--line);text-align:left}
+      .md-article th{background:rgba(255,255,255,0.05)}
+      .md-article blockquote{border-left:3px solid var(--violet);padding-left:1rem;margin:1rem 0;color:var(--muted)}
+      .md-article a{color:var(--python);text-decoration:underline;text-underline-offset:3px}
+      .md-article hr{border:none;border-top:1px solid var(--line);margin:2rem 0}
+      .md-article .toc{background:rgba(13,20,35,0.6);border:1px solid var(--line);border-radius:16px;padding:1.2rem 1.6rem;margin:1.2rem 0}
+      .md-article .toc ul{list-style:none;padding-left:0}
+      .md-article .toc li{margin:0.3rem 0}
+      .md-article .toc a{color:var(--muted);text-decoration:none}
+      .md-article .toc a:hover{color:var(--text)}
+      .mermaid{background:rgba(0,0,0,0.2);border-radius:14px;padding:1rem}
+    </style>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <canvas class="particle-canvas" data-particles aria-hidden="true"></canvas>
+    <div class="site-shell">
+      <header class="nav">
+        <div class="nav-inner">
+          <a class="brand" href="index.html" aria-label="zh_catmut home">
+            <span class="brand-mark" aria-hidden="true"></span>
+            <span class="brand-text">
+              <span class="brand-name">zh_catmut</span>
+              <span class="brand-subtitle">docs</span>
+            </span>
+          </a>
+          <button class="nav-toggle" type="button" data-nav-toggle aria-label="Toggle navigation" aria-expanded="false"><span></span></button>
+          <nav class="nav-links" aria-label="Primary navigation">
+            <a href="index.html">Landing</a>
+            <a href="docs.html">Docs</a>
+            <a href="architecture.html">Architecture</a>
+            <a href="https://github.com/mohamedhossammohamed/zh_catmut" target="_blank" rel="noopener">GitHub</a>
+          </nav>
+        </div>
+      </header>
+
+      <main id="main">
+        <section class="page-hero">
+          <div class="container">
+            <div class="reveal">
+              <p class="eyebrow"><span class="eyebrow-dot"></span>Document 01</p>
+              <h1>Categorical Internals & Memory</h1>
+              <p>Understanding why high-level Pandas relabeling can explode memory usage on large categoricals.</p>
+            </div>
+          </div>
+        </section>
+
+        <div class="container docs-layout">
+          <aside class="docs-sidebar reveal" aria-label="Documentation contents">
+            <strong>Contents</strong>
+            <nav>
+              
+            </nav>
+          </aside>
+
+          <article class="doc-article md-article">
+            <h1 id="native-data-systems-engineering-resolving-categorical-merge-bottlenecks-and-c-abi-zero-copy-strategies-at-the-100-million-row-scale"><strong>Native Data Systems Engineering: Resolving Categorical Merge Bottlenecks and C-ABI Zero-Copy Strategies at the 100-Million-Row Scale</strong></h1>
+<h2 id="the-architectural-foundations-of-categorical-data-in-pandas"><strong>The Architectural Foundations of Categorical Data in Pandas</strong></h2>
+<p>In the realm of high-performance computing, bioinformatics, and enterprise-scale data science, managing in-memory tabular data structures presents profound engineering challenges. Datasets frequently scale to hundreds of millions of rows, pushing the boundaries of what interpreted languages and dynamically typed environments can process efficiently. Within the Python ecosystem, the Pandas library serves as the foundational architecture for data manipulation. However, a severe and widely documented bottleneck arises when manipulating, relabeling, or merging categorical data within DataFrames of this magnitude. Attempting to merge or update categorical columns in datasets exceeding 100 million rows frequently results in catastrophic memory spikes, often doubling or tripling the baseline memory footprint and triggering fatal Out-Of-Memory (OOM) exceptions.<br />
+To engineer a native unmanaged solution, it is first necessary to deconstruct the internal memory layouts and abstractions that govern the Pandas DataFrame. Pandas implements categorical data as a composite, logical data type designed to decouple the semantic meaning of a dataset from its physical hardware representation. Unlike primitive numerical arrays, a categorical column is not a single contiguous block of memory containing string representations. Instead, the implementation is heavily inspired by the factor variable construct found in the R programming language, utilizing a dictionary-encoded architecture.3</p>
+<h3 id="the-dual-array-internal-structure"><strong>The Dual-Array Internal Structure</strong></h3>
+<p>The underlying data structure of a CategoricalDtype consists of two entirely distinct physical arrays that operate in tandem to provide the illusion of a unified column 3:</p>
+<ol>
+<li><strong>The Categories Array:</strong> This is a relatively small, auxiliary lookup table that stores the unique, distinct values present in the dataset.2 In most data science workloads, these categories are textual, represented in memory as Python string objects or references to NumPy object arrays. The order of elements within this array determines the logical ordering of the categorical variable, which dictates how operations like sorting and minimum/maximum evaluations are executed.3  </li>
+<li><strong>The Codes Array:</strong> This is a dense, contiguous NumPy array of integers representing the actual underlying data for every row in the DataFrame. Each integer in this array acts as a direct index mapping back to a specific value within the categories array.2 If a value is missing (represented logically as np.nan), the internal code is typically assigned a sentinel value of -1.3</li>
+</ol>
+<p>The physical storage type utilized for the codes array is not statically defined; rather, it is dynamically allocated based on the cardinality of the data. The Pandas framework optimizes memory consumption by dynamically selecting the smallest possible integer type required to accommodate the total number of unique categories. For example, if a bioinformatics dataset contains 50 unique chromosome identifiers, the codes array will be instantiated using an int8 physical type, consuming exactly one byte per row. If the unique categories expand to 1,000 discrete identifiers, the storage seamlessly shifts to an int16 architecture, consuming two bytes per row. This dynamic physical storage allows a 100-million-row dataset to theoretically occupy only 100 megabytes of memory for its data payload, a dramatic reduction compared to storing full string objects.2</p>
+<h3 id="the-blockmanager-and-extension-type-friction"><strong>The BlockManager and Extension Type Friction</strong></h3>
+<p>The orchestration of these underlying arrays is historically managed by a core architectural component known as the BlockManager.8 The BlockManager is an internal memory management object designed to consolidate columns possessing identical physical data types into two-dimensional blocks.8 This architecture was originally implemented to leverage NumPy's highly optimized two-dimensional array operations, allowing Pandas to execute row-oriented computations by concatenating numerical columns and utilizing array broadcasting.10<br />
+However, the BlockManager introduces severe complexity when managing "synthetic" or extension data types, such as categoricals, datetimes with timezones, or sparse arrays, which are fundamentally unknown to the underlying NumPy C-API. Because NumPy functions cannot interpret the semantics of a categorical type or maintain the linkage between the codes and the categories dictionary, the Pandas codebase is heavily reliant on manual datatype-based branching.<br />
+Throughout the library's internal architecture, execution paths are diverted using conditional logic such as is_categorical_dtype(dtype) to intercept categorical columns before they are subjected to standard NumPy operations. This dynamic dispatching creates an immense "fan-out" effect, where metadata such as the categories array must be carefully preserved during indexing, concatenation, and merging operations. If these interceptions fail, or if an operation is invoked that cannot natively support the categorical semantics, the BlockManager is forced to abandon the highly compressed dictionary encoding to prevent data corruption. In doing so, it reverts the data back to a basic NumPy physical type, specifically an object array. This catastrophic reversion, known as the object-mode fallback, is the fundamental mechanical trigger for the memory spikes observed in large-scale data manipulation.11</p>
+<h2 id="the-memory-lifecycle-and-cpu-constraints-of-large-scale-merges"><strong>The Memory Lifecycle and CPU Constraints of Large-Scale Merges</strong></h2>
+<p>When executing a merge or join operation on a 100-million-row DataFrame using categorical keys, the interaction between the Python memory allocator, the BlockManager, and the hardware's CPU cache hierarchy dictates the success or failure of the computational pipeline. The specific vulnerability arises when merging datasets that contain mismatched categorical dictionaries, a scenario that is practically unavoidable in distributed data collection or iterative bioinformatics pipelines.</p>
+<h3 id="the-mechanics-of-the-object-mode-fallback"><strong>The Mechanics of the Object-Mode Fallback</strong></h3>
+<p>A Pandas merge (pd.merge) operates analogously to a relational database join. When the specified merge keys are categorical columns, the internal optimizer attempts to accelerate the operation by comparing the underlying integer codes rather than the semantic string values. This highly efficient integer comparison relies on an absolute, strict precondition: both categorical columns must share the exact same categories array, possessing the exact same values in the exact same index order.12<br />
+If the DataFrames contain non-identical categories—even if the left DataFrame simply contains a superset of the categories found in the right DataFrame—Pandas determines that the integer codes are no longer safely comparable.12 For instance, a code of 2 in the left dataset might map to the string "Heterozygous", while a code of 2 in the right dataset might map to "Homozygous". To prevent silently corrupting the join logic, Pandas abandons the integer comparison.12<br />
+When faced with misaligned dictionaries, the framework triggers the object-mode fallback.11 The memory lifecycle during this event is devastating to system resources:</p>
+<ol>
+<li><strong>Dictionary Decompression:</strong> The highly compressed int8 or int16 codes array is effectively discarded for the purpose of the operation. Pandas begins a full reconstruction of the semantic values for every single row.  </li>
+<li><strong>Object Instantiation and Allocation:</strong> The system allocates a massive new NumPy array of dtype object. For a dataset of 100 million rows, this array alone immediately consumes approximately 800 megabytes of memory, as it must store 100 million 64-bit pointers (8 bytes per pointer).  </li>
+<li><strong>Python String Overhead:</strong> The pointers within the object array must reference actual Python string objects. Python strings are immutable structures that carry a massive memory overhead compared to raw C strings.6 A simple three-character string like "Red" does not consume 3 bytes; it consumes approximately 50 bytes in the CPython interpreter due to mandatory metadata, including reference counts, hash caches, and type pointers.6  </li>
+<li><strong>Heap Fragmentation and Memory Explosion:</strong> Creating 100 million string instances requires allocating memory across the Python heap. While CPython attempts to utilize string interning to reuse identical short strings, the sheer volume of pointer mapping and allocation overhead causes immense heap fragmentation.6 A categorical column that efficiently occupied 100 megabytes as an int8 array instantly balloons to consume between 5 gigabytes and 10 gigabytes of random access memory.6  </li>
+<li><strong>Merge Amplification:</strong> During the actual database-style join, Pandas frequently creates temporary intermediate arrays to hold the cartesian product or the aligned indices of the matching rows. Because the merge keys have been converted to bulky object types, these intermediate data structures also demand tens of gigabytes of RAM. This rapid, uncontrolled allocation exhausts available system memory, subsequently invoking the operating system's OOM Killer to terminate the Python process.15</li>
+</ol>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Structural Representation</th>
+<th style="text-align: left;">Hardware Type</th>
+<th style="text-align: left;">Memory per Row (Bytes)</th>
+<th style="text-align: left;">Projected Size for 100M Rows</th>
+<th style="text-align: left;">Structural Characteristics</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>Categorical Encoding</strong></td>
+<td style="text-align: left;">int8</td>
+<td style="text-align: left;">1 byte</td>
+<td style="text-align: left;">\~100 MB</td>
+<td style="text-align: left;">Dense, highly contiguous, minimal pointer overhead.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Categorical Encoding</strong></td>
+<td style="text-align: left;">int16</td>
+<td style="text-align: left;">2 bytes</td>
+<td style="text-align: left;">\~200 MB</td>
+<td style="text-align: left;">Dense, highly contiguous, minimal pointer overhead.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>NumPy Object Array</strong></td>
+<td style="text-align: left;">64-bit Pointer</td>
+<td style="text-align: left;">8 bytes</td>
+<td style="text-align: left;">\~800 MB</td>
+<td style="text-align: left;">Array of memory addresses lacking data locality.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Python String Heap</strong></td>
+<td style="text-align: left;">PyASCIIObject</td>
+<td style="text-align: left;">\~50+ bytes</td>
+<td style="text-align: left;">\~5 GB to 10 GB</td>
+<td style="text-align: left;">High fragmentation, scattered heap allocation.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="cpu-cache-locality-and-pointer-chasing"><strong>CPU Cache Locality and Pointer Chasing</strong></h3>
+<p>Beyond raw memory exhaustion, the object-mode fallback introduces severe constraints on the Central Processing Unit. Modern CPU architectures execute instructions at a rate exponentially faster than system RAM can supply the necessary data. To prevent the processor from idling, hardware architectures rely on a complex hierarchy of high-speed caches (L1, L2, and L3) positioned physically close to the processor cores.17<br />
+When a data system operates on a pure categorical codes array, the CPU fetches contiguous blocks of integer data from main memory.17 Memory is retrieved in fixed-size blocks known as "cache lines," which are typically 64 bytes in width on modern x86 processors.17 Because an int8 array is perfectly contiguous, fetching a single code implicitly loads the adjacent 63 codes into the ultra-fast L1 cache.17 This phenomenon, known as spatial locality, allows vectorized mapping operations to execute at the maximum theoretical throughput of the hardware, utilizing Single Instruction, Multiple Data (SIMD) vectorization pipelines.19<br />
+Conversely, when the object-mode fallback is triggered, the CPU is forced to traverse a NumPy object array to perform the merge comparisons.19 This array does not contain the data; it contains memory addresses pointing to strings scattered randomly across the system's heap.19 To compare two categorical keys during the merge, the CPU must perform the following sequence:</p>
+<ol>
+<li>Retrieve the pointer from the object array (often resulting in an L1 cache miss).  </li>
+<li>Dereference the pointer to locate the string object in main memory. This non-linear jump is a guaranteed L2 and L3 cache miss, forcing the CPU to retrieve the data from main RAM, a penalty costing 200 to 300 clock cycles per access.17  </li>
+<li>Read the localized string bytes to perform the lexicographical comparison.</li>
+</ol>
+<p>This erratic, non-linear memory access pattern is known in systems engineering as "pointer chasing".19 It utterly defeats hardware prefetchers, which are designed to anticipate linear memory access.19 The CPU pipeline is subjected to continuous stalls as it waits for the Translation Lookaside Buffer (TLB) to resolve random virtual heap addresses.19 Consequently, a category relabeling or merge operation that should theoretically execute in milliseconds is stretched into minutes or hours, effectively starving the GPU or CPU computational pipeline.19</p>
+<h2 id="critical-evaluation-of-python-native-workarounds"><strong>Critical Evaluation of Python-Native Workarounds</strong></h2>
+<p>Data scientists and systems engineers frequently attempt to mitigate these memory constraints utilizing a variety of Python-native workarounds. While these strategies may suffice for small to medium datasets, they are structurally insufficient for rigorous, large-scale workloads such as single-cell RNA sequencing, tick-level financial data processing, or large-scale machine learning pipelines.</p>
+<h3 id="the-limitations-of-dictionary-manipulation-apis"><strong>The Limitations of Dictionary Manipulation APIs</strong></h3>
+<p>A heavily recommended approach to circumvent the object-mode fallback during a merge is to proactively align the categories of both DataFrames using the cat.rename_categories or cat.set_categories APIs prior to the join operation.23 By forcefully ensuring both columns possess identical CategoricalDtype structures, the user attempts to trick Pandas into executing the fast integer-based merge.12<br />
+However, the mechanical implementation of these methods precludes them from serving as a viable solution at the 100-million-row scale. The rename_categories function operates exclusively on the auxiliary dictionary array.11 Because it only mutates the small metadata lookup table, it is incredibly fast and avoids touching the massive codes array.11 Unfortunately, it requires a strict 1-to-1 mapping; the new categories list must possess the exact same length as the old list.23 It cannot be used to unify disparately sized dictionaries or append missing categories.23<br />
+To align disparate datasets, the engineer must invoke set_categories.25 When this method is executed to inject missing categories or reorder existing elements to match a secondary DataFrame, Pandas cannot simply append strings to the existing dictionary.25 The underlying logic dictates that the entire integer codes array must be recomputed to accurately map to the newly reordered dictionary index.25<br />
+This reallocation forces a complete, sequential pass over the 100-million-row dataset. Furthermore, under the strict memory lifecycle rules implemented in Pandas—specifically the Copy-on-Write (CoW) paradigm introduced in versions 2.0 and heavily enforced in 3.0—this operation cannot be executed in-place.27 The CoW architecture guarantees that mutating operations do not unintentionally alter views of the data.28 Consequently, when set_categories triggers a re-encoding, Pandas allocates a completely new 100-million-integer memory buffer to hold the updated codes.29 During the execution of this computation, both the original array and the newly allocated array coexist in memory simultaneously, effectively doubling the memory footprint of the column.31 For data science environments already operating near the absolute limits of available hardware RAM, this transient doubling effect acts as an immediate catalyst for an OOM exception.31</p>
+<h3 id="the-deficiencies-of-chunking-and-out-of-core-processing"><strong>The Deficiencies of Chunking and Out-of-Core Processing</strong></h3>
+<p>Another highly promoted strategy is iterative processing, either by reading files in batches utilizing the chunksize parameter in read_csv, or by deploying out-of-core computational frameworks such as Dask, Vaex, or Ray.33<br />
+While chunking is highly effective for localized mathematical aggregations (e.g., computing cumulative sums or means), it fundamentally collapses when applied to global categorical encoding and relational merges.33 If a categorical column is processed in chunks, the read_csv parser will generate an isolated, highly localized dictionary for each individual chunk.33 For example, a genetic identifier string like "Gene_Alpha" might be arbitrarily assigned the integer code 0 in Chunk 1, but encoded as 14 in Chunk 2 depending on the localized frequency of values.<br />
+Unifying these disparate, chunked categorical structures into a single global categorical index requires an immensely expensive reconciliation phase.12 The system must compute a global consensus dictionary and rewrite the integer codes across all chunks, a process that frequently forces the data back into highly inefficient object types during the unification sequence.12<br />
+Distributed frameworks such as Dask attempt to abstract this complexity away by managing the chunking and global dictionary mapping internally.34 However, this abstraction incurs a punishing cost in the form of serialization and Inter-Process Communication (IPC) overhead.7 Dask's task graph scheduling forces the data structures to be serialized over the network or spilled to disk during complex shuffle operations necessary for distributed merges.7 This introduces an I/O latency barrier that is entirely unacceptable for interactive bioinformatics or quantitative finance workflows, where real-time analytical throughput is absolutely critical.7</p>
+<h3 id="the-failure-of-memory-mapped-numpy-arrays"><strong>The Failure of Memory-Mapped NumPy Arrays</strong></h3>
+<p>To entirely bypass system RAM limits, systems engineers sometimes attempt to utilize numpy.memmap to map the categorical codes array directly to solid-state storage.38 This technique allows the operating system to page data into RAM dynamically, avoiding memory saturation.<br />
+While memory mapping functions flawlessly for dense, fixed-width numerical data (such as the integer codes array), it is architecturally incompatible with the categories dictionary if it contains variable-length Python strings.39 Python object references cannot be safely memory-mapped to disk because memory addresses are completely ephemeral; they are specific to the active heap of the current Python process.40 Attempting to persist or map string data requires forcefully casting the variables to fixed-width unicode arrays (e.g., \&lt;U50), a process that drastically inflates the memory footprint by indiscriminately padding shorter strings with null bytes.39<br />
+Furthermore, memory mapping relies entirely on the speed of the underlying disk I/O. If a non-aligned merge forces a random-access traversal of the mapped array, the operation will trigger continuous page faults, resulting in severe disk thrashing and reducing the computational throughput by several orders of magnitude.19</p>
+<h2 id="the-pyarrow-backend-paradigm-and-persistent-boundaries"><strong>The PyArrow Backend Paradigm and Persistent Boundaries</strong></h2>
+<p>In an effort to eradicate the deep architectural flaws associated with the NumPy object fallback, recent iterations of Pandas (beginning in 2.0 and expanding in 3.0) introduced the Apache Arrow (PyArrow) memory backend.41 Instead of falling back to scattered arrays of Python string pointers, the Arrow backend stores string data in a highly contiguous, columnar format.41<br />
+Within the Arrow ecosystem, categorical data is natively supported via a "Dictionary-Encoded" array format.44 This backend implementation vastly improves baseline memory consumption and significantly reduces the allocation overhead associated with the legacy BlockManager.43 By setting dtype_backend="pyarrow", strings are maintained compactly, preventing the massive fragmentation caused by Python objects.42<br />
+However, it is critical to understand that while the Arrow backend prevents the severe inflation caused by Python string instantiation, it does not intrinsically solve the heavy computational bottleneck of <em>relabeling</em> or <em>unifying</em> massive misaligned dictionaries during a merge at the 100-million-row scale.47 The PyArrow backend still requires extensive CPU cycles to reconcile disparate string offsets and rewrite indices when performing a join operation across mismatched categorical columns.47 Furthermore, if highly specialized, domain-specific logic is required to translate, hash, or heavily mutate these categories (a common requirement in bespoke genomics processing), the developer remains tightly confined by Python's single-threaded Global Interpreter Lock (GIL) and the specific limitations of the built-in PyArrow compute functions.44<br />
+To achieve absolute maximum throughput, prevent intermediate allocation spikes, and fully control the hardware thread pool, the massive categorical data payloads must be explicitly handed over to a highly optimized, unmanaged native language environment—such as C# or Zig—without triggering a deep memory copy.</p>
+<h2 id="theoretical-c-abi-boundary-mapping-for-zero-copy-execution"><strong>Theoretical C-ABI Boundary Mapping for Zero-Copy Execution</strong></h2>
+<p>The definitive solution to resolving the 100-million-row categorical bottleneck lies in exporting the internal data structures directly out of the Python interpreter and into a native processing system via the C-Application Binary Interface (C-ABI). By bypassing Python's memory management entirely, a native C# or Zig extension can construct highly optimized, concurrent hashing architectures to unify dictionaries and rapidly re-index the 100-million-row codes arrays in fractions of a second. This is achieved utilizing raw pointer arithmetic, zero garbage collection overhead, and explicit SIMD hardware instructions.<br />
+To accomplish this safely, the underlying data buffers must be exposed to the native extension without any form of serialization or copying overhead. In the Python data engineering ecosystem, there are two primary mechanisms available for exposing raw memory: the legacy Python Buffer Protocol and the modern Arrow C Data Interface.</p>
+<h3 id="the-limitations-of-the-python-buffer-protocol-pep-3118"><strong>The Limitations of the Python Buffer Protocol (PEP 3118)</strong></h3>
+<p>The Python Buffer Protocol (formally established in PEP 3118) provides a standardized C-API designed to expose the raw memory pointers of contiguous byte arrays to external consumers.50 By executing PyObject_GetBuffer() or utilizing the Python-level memoryview construct, an object can securely export a pointer to its internal memory buffer, alongside essential metadata defining its shape, strides, and datatype format.50<br />
+Because a standard Pandas Categorical is physically partitioned, the Buffer Protocol appears initially highly effective for exporting the integer codes array. A native C# or Zig extension can instantly acquire a direct pointer to the 100 million integers (e.g., an int8 or int32 block) without making a single copy.52 The native environment receives a raw memory address and can theoretically cast it to a Span\&lt;byte&gt; or a const u8 slice, allowing for immediate, in-place mutation of the codes.53<br />
+However, the Buffer Protocol completely disintegrates when attempting to export the categories dictionary.50 If the categories are comprised of standard Python strings, the underlying NumPy array utilized by the BlockManager is of object dtype.55 Exporting an object array via the Buffer Protocol is inherently dangerous; it merely yields a contiguous array of raw memory addresses (pointers) to internal CPython PyObject structs.54 The native C# or Zig extension cannot safely read or decode these strings without executing callbacks into the CPython API (e.g., utilizing PyUnicode_AsUTF8AndSize).54 This requirement immediately forces the native extension to reacquire the Python Global Interpreter Lock (GIL), introduces severe reference counting overhead, and completely negates the multi-threading and cache-locality benefits of dropping down to native code.54 Thus, while the Buffer Protocol is perfectly suitable for numerical tensors, it is structurally incompatible with variable-length string dictionaries.</p>
+<h3 id="the-apache-arrow-c-data-interface"><strong>The Apache Arrow C Data Interface</strong></h3>
+<p>The absolute apex solution for crossing the C-ABI boundary is the Arrow C Data Interface.57 This interface was specifically architected to eradicate serialization overhead between disparate data runtimes (e.g., passing data from Python to Rust, Go, or Zig).57 It operates by utilizing two minimal, highly stable C structures: ArrowSchema (which encodes type metadata) and ArrowArray (which holds pointers to the actual raw data buffers).57<br />
+When a Pandas DataFrame is configured to utilize the PyArrow backend (dtype="category[pyarrow]" or dtype_backend="pyarrow"), the data is already natively residing in Arrow's strict memory layout.41</p>
+<h4 id="memory-layout-of-an-arrow-dictionary-encoded-array"><strong>Memory Layout of an Arrow Dictionary-Encoded Array</strong></h4>
+<p>In the Arrow ecosystem, categorical data is formally recognized as a Dictionary-Encoded array.57 This memory layout is profoundly superior for C-ABI interoperability because it strictly forbids language-specific object wrappers or hidden interpreter state.<br />
+The core C structures defining this boundary are defined as follows 58:</p>
+<p>C</p>
+<p>struct ArrowSchema {<br />
+  const char* format;<br />
+  const char* name;<br />
+  const char* metadata;<br />
+  int64_t flags;<br />
+  int64_t n_children;<br />
+  struct ArrowSchema** children;<br />
+  struct ArrowSchema* dictionary; // Pointer to the dictionary schema<br />
+  void (*release)(struct ArrowSchema*);<br />
+  void* private_data;<br />
+};</p>
+<p>struct ArrowArray {<br />
+  int64_t length;<br />
+  int64_t null_count;<br />
+  int64_t offset;<br />
+  int64_t n_buffers;<br />
+  const void** buffers; // Array of C-pointers to data buffers<br />
+  int64_t n_children;<br />
+  struct ArrowArray** children;<br />
+  struct ArrowArray* dictionary; // Pointer to the nested dictionary array<br />
+  void (*release)(struct ArrowArray*);<br />
+  void* private_data;<br />
+};</p>
+<p>When passing an Arrow Dictionary-Encoded array from Python to a native language like Zig or C#, the data structures unfold in a strict, predictable sequence 57:</p>
+<ol>
+<li><strong>The Parent ArrowArray (Representing the Codes):</strong>  </li>
+<li>ArrowSchema.format: Will denote the precise integer type utilized for the indices (e.g., "c" representing int8, or "i" representing int32).57  </li>
+<li>ArrowArray.buffers: A memory pointer to the validity bitmap. This handles missing data natively at the bit-level, completely separating null representations from the data payload.60  </li>
+<li>ArrowArray.buffers: A memory pointer to the contiguous, dense integer array of codes.60 For a 100-million-row dataset scaled to int32, this represents a raw, unmanaged 400 MB block of contiguous memory.  </li>
+<li><strong>The Nested ArrowArray.dictionary (Representing the Categories):</strong>  </li>
+<li>In stark contrast to NumPy's array of PyObject pointers, the dictionary is a fully self-contained, nested Arrow String Array.57  </li>
+<li>ArrowSchema.dictionary-&gt;format: Will denote a variable-length string type (e.g., "u" representing UTF-8 standard strings).57  </li>
+<li>ArrowArray.dictionary-&gt;buffers: The validity bitmap specific to the category strings.  </li>
+<li>ArrowArray.dictionary-&gt;buffers: The <strong>Offsets Buffer</strong>. This is a dense int32 array denoting the exact byte index where each individual string begins and ends within the subsequent values buffer.60  </li>
+<li>ArrowArray.dictionary-&gt;buffers: The <strong>Values Buffer</strong>. A single, massive, contiguous byte array containing all the UTF-8 text squashed together perfectly, with absolutely no padding, metadata, or object overhead.60</li>
+</ol>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Arrow Structure Component</th>
+<th style="text-align: left;">C-Interface Reference</th>
+<th style="text-align: left;">Content Description</th>
+<th style="text-align: left;">Example Raw Buffer Layout</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>Index (Codes)</strong></td>
+<td style="text-align: left;">ArrowArray</td>
+<td style="text-align: left;">The 100M row index</td>
+<td style="text-align: left;">buffers: [0, 1, 1, 2, 0,...]</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Dictionary (Strings)</strong></td>
+<td style="text-align: left;">ArrowArray.dictionary</td>
+<td style="text-align: left;">The semantic categories</td>
+<td style="text-align: left;">buffers (Offsets): `` buffers (Text): "RedBlueGreen"</td>
+</tr>
+</tbody>
+</table>
+<h3 id="executing-the-relabel-and-merge-via-native-extension"><strong>Executing the Relabel and Merge via Native Extension</strong></h3>
+<p>By leveraging the modern PyCapsule API (__arrow_c_array__), Python can yield these two nested C structures directly into a native C# or Zig environment in less than a microsecond, passing only memory addresses and requiring zero deep copying.57<br />
+Once across the boundary, the native systems engineer possesses raw, untethered memory pointers to the entire dataset. The workflow to merge or relabel the massive categorical structure without triggering OOM errors or intermediate duplications proceeds as follows:</p>
+<ol>
+<li><strong>Read the String Dictionary (Zero-Copy Interrogation):</strong> The native code bypasses all Python string APIs. It iterates exclusively over the Dictionary Offsets buffer. By computing the mathematical difference offsets[i+1] - offsets[i], the exact byte length of the <img alt="" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAcAAAAXCAYAAADHhFVIAAAAaElEQVR4XmNgGHigAMT30QVh4C0Q/0cXpAx0AnECuiAI/IDSIPsckSVmAjETlA2SdEWSY6iF0v0MeFwKkihEFwSBPAaELmEgNkGSA0u8g7IfI0uAwDMgPsQAsT8TTQ4MAoBYDF1w6AAA4oAS3/pLqloAAAAASUVORK5CYII=" />-th category string is instantly calculated. The string bytes are then read directly from the Values buffer using the start offset. No string objects are ever instantiated; they are manipulated strictly as lightweight ReadOnlySpan\&lt;byte&gt; in C# or const u8 slices in Zig.62  </li>
+<li><strong>Construct a Native Unmanaged Hash Map:</strong><br />
+   If merging two mismatched columns, the native code constructs a high-performance, concurrent hash map using a custom allocator (e.g., std.heap.c_allocator in Zig or NativeMemory.Alloc in C#). This map links the raw UTF-8 byte slices to a newly determined, unified global integer index. Because the dictionary is exceptionally small relative to the 100-million-row body (e.g., a few thousand distinct genes or product codes), this hash map consumes barely a few megabytes of RAM.  </li>
+<li><strong>Execute Highly Parallel Re-indexing:</strong><br />
+   The native code allocates a single, unmanaged block of memory for the <em>new</em> unified 100-million-row codes array. Operating entirely outside the constraints of the Python GIL, aggressive thread pools (utilizing C# Parallel.For or Zig native threads) iterate over the original codes buffer.<br />
+   For each code in the original array:  </li>
+<li>The system looks up the original string length and byte offset.  </li>
+<li>It calculates the hash of the raw string slice.  </li>
+<li>It looks up the new global integer code from the unmanaged hash map.  </li>
+<li>It writes the newly aligned code to the target output buffer.</li>
+</ol>
+<p>Because this algorithm relies exclusively on dense pointer arithmetic and raw byte arrays, spatial CPU cache locality is perfectly maintained throughout the execution. The L1 and L2 processor caches remain heavily saturated with continuous blocks of integers and offset logic.17 There are no garbage-collected objects instantiated, no reference counts incremented, and zero heap fragmentation occurs.6</p>
+<ol>
+<li><strong>Zero-Copy Export to Python:</strong> Finally, the native code constructs a brand new ArrowArray C struct that explicitly wraps the newly populated unmanaged output buffer and the unified dictionary buffers.57 By supplying a strictly compliant release callback within the struct (which signals to Python how to free the memory once it is no longer needed), memory ownership is safely and seamlessly delegated back to the interpreter.57 The struct is passed back across the C-ABI, and PyArrow effortlessly reconstructs a highly optimized Pandas DataFrame directly from the raw pointers, achieving the unification without ever copying the 100 million rows in Python memory.64</li>
+</ol>
+<h2 id="conclusion"><strong>Conclusion</strong></h2>
+<p>The extreme memory spikes and subsequent system failures experienced when merging or relabeling large-scale Categorical DataFrames in Pandas are an inescapable consequence of the library's internal abstraction leaks. When dictionaries fail to align seamlessly during a join operation, the legacy BlockManager abandons its highly efficient integer encoding mechanisms, invoking an object-mode fallback that forces the reconstruction of hundreds of millions of disjointed Python string objects.11 This catastrophic mechanism deeply fragments the system memory heap, destroys CPU spatial cache locality by inducing rapid pointer chasing, and causes insurmountable OOM faults that paralyze large-scale bioinformatics and enterprise data pipelines.6<br />
+Conventional Python-native workarounds, such as manual dictionary alignment, restrictive chunking, or memory-mapped disk arrays, merely distribute the computational friction rather than fundamentally resolving it. Specifically, the enforcement of Copy-on-Write (CoW) semantics guarantees that native Pandas dictionary modification APIs will trigger massive intermediate array allocations, inherently violating tight memory constraints.25<br />
+By entirely bypassing Python's memory lifecycle constraints through the Apache Arrow C Data Interface, data engineering architectures can achieve unparalleled scalability and determinism.57 A native extension authored in C# or Zig can ingest the strictly contiguous ArrowArray memory pointers—elegantly separating the massive integer indices from the variable-length dictionary byte buffers—and execute unified hashing and re-indexing routines at bare-metal processing speeds.60 This highly structural methodology ensures rigid predictability in RAM consumption, maximizes L1/L2 cache saturation by avoiding the instantiation of managed objects, and successfully delivers analytical transformations of 100-million-row datasets back to the Python runtime with absolute zero-copy efficiency.</p>
+<h4 id="works-cited"><strong>Works cited</strong></h4>
+<ol>
+<li>pandas2/source/internal-architecture.rst at master - GitHub, accessed on May 7, 2026, <a href="https://github.com/pydata/pandas-design/blob/master/source/internal-architecture.rst">https://github.com/pydata/pandas-design/blob/master/source/internal-architecture.rst</a>  </li>
+<li>Categorical data — pandas 3.0.2 documentation - PyData |, accessed on May 7, 2026, <a href="https://pandas.pydata.org/docs/user_guide/categorical.html">https://pandas.pydata.org/docs/user_guide/categorical.html</a>  </li>
+<li>pandas.Categorical — pandas 3.0.2 documentation - PyData |, accessed on May 7, 2026, <a href="https://pandas.pydata.org/docs/reference/api/pandas.Categorical.html">https://pandas.pydata.org/docs/reference/api/pandas.Categorical.html</a>  </li>
+<li>Pandas Categorical data type not behaving as expected - Stack Overflow, accessed on May 7, 2026, <a href="https://stackoverflow.com/questions/29829427/pandas-categorical-data-type-not-behaving-as-expected">https://stackoverflow.com/questions/29829427/pandas-categorical-data-type-not-behaving-as-expected</a>  </li>
+<li>Pandas Memory: Why Your DataFrame is 10x Larger Than Needed | PythonAlchemist, accessed on May 7, 2026, <a href="https://www.pythonalchemist.com/blog/pandas-memory-optimization">https://www.pythonalchemist.com/blog/pandas-memory-optimization</a>  </li>
+<li>7 Hidden Python Memory Optimization Patterns That Slash Data Pipeline RAM Usage by 80% | by Nithin Bharadwaj | TechKoala Insights - Medium, accessed on May 7, 2026, <a href="https://medium.com/techkoala-insights/7-hidden-python-memory-optimization-patterns-that-slash-data-pipeline-ram-usage-by-80-d93511392312">https://medium.com/techkoala-insights/7-hidden-python-memory-optimization-patterns-that-slash-data-pipeline-ram-usage-by-80-d93511392312</a>  </li>
+<li>Internal Structure of Pandas DataFrames, accessed on May 7, 2026, <a href="https://dkharazi.github.io/blog/blockmanager/">https://dkharazi.github.io/blog/blockmanager/</a>  </li>
+<li>The one pandas internal I teach all my new colleagues: the BlockManager - - Uwe's Blog, accessed on May 7, 2026, <a href="https://uwekorn.com/2020/05/24/the-one-pandas-internal.html">https://uwekorn.com/2020/05/24/the-one-pandas-internal.html</a>  </li>
+<li>How is Pandas Block Manager improving performance? - Stack Overflow, accessed on May 7, 2026, <a href="https://stackoverflow.com/questions/72697587/how-is-pandas-block-manager-improving-performance">https://stackoverflow.com/questions/72697587/how-is-pandas-block-manager-improving-performance</a>  </li>
+<li>Using pandas categories properly is tricky... here's why | TDS Archive - Medium, accessed on May 7, 2026, <a href="https://medium.com/data-science/staying-sane-while-adopting-pandas-categorical-datatypes-78dbd19dcd8a">https://medium.com/data-science/staying-sane-while-adopting-pandas-categorical-datatypes-78dbd19dcd8a</a>  </li>
+<li>Automatically keep categorical type on merge · Issue #24093 · pandas-dev/pandas - GitHub, accessed on May 7, 2026, <a href="https://github.com/pandas-dev/pandas/issues/24093">https://github.com/pandas-dev/pandas/issues/24093</a>  </li>
+<li>Merging Pandas DataFrames on categorical series - Stack Overflow, accessed on May 7, 2026, <a href="https://stackoverflow.com/questions/27164380/merging-pandas-dataframes-on-categorical-series">https://stackoverflow.com/questions/27164380/merging-pandas-dataframes-on-categorical-series</a>  </li>
+<li>pd.merge on Categoricals duplicating unique rows · Issue #16767 - GitHub, accessed on May 7, 2026, <a href="https://github.com/pandas-dev/pandas/issues/16767">https://github.com/pandas-dev/pandas/issues/16767</a>  </li>
+<li>Python app keeps OOM crashing on Pandas merge - Stack Overflow, accessed on May 7, 2026, <a href="https://stackoverflow.com/questions/78215243/python-app-keeps-oom-crashing-on-pandas-merge">https://stackoverflow.com/questions/78215243/python-app-keeps-oom-crashing-on-pandas-merge</a>  </li>
+<li>Pandas Merge Two DataFrames results in Memory Leak - Stack Overflow, accessed on May 7, 2026, <a href="https://stackoverflow.com/questions/63423748/pandas-merge-two-dataframes-results-in-memory-leak">https://stackoverflow.com/questions/63423748/pandas-merge-two-dataframes-results-in-memory-leak</a>  </li>
+<li>Why and How Cache Locality Can Make Your Code Faster - Arpit Bhayani, accessed on May 7, 2026, <a href="https://arpitbhayani.me/blogs/cpu-cache-locality/">https://arpitbhayani.me/blogs/cpu-cache-locality/</a>  </li>
+<li>(PDF) Machine learning-based cache miss prediction - ResearchGate, accessed on May 7, 2026, <a href="https://www.researchgate.net/publication/391018822_Machine_learning-based_cache_miss_prediction">https://www.researchgate.net/publication/391018822_Machine_learning-based_cache_miss_prediction</a>  </li>
+<li>Is Python Code Sensitive to CPU Caching? - Lukas Atkinson, accessed on May 7, 2026, <a href="https://lukasatkinson.de/2024/python-cpu-caching/">https://lukasatkinson.de/2024/python-cpu-caching/</a>  </li>
+<li>Optimize Pandas &amp; Dask for big datasets, accessed on May 7, 2026, <a href="https://busta.win/posts/optimize-pandas-dask-big-datasets">https://busta.win/posts/optimize-pandas-dask-big-datasets</a>  </li>
+<li>Is Python Code Sensitive to CPU Caching? (2024) - Hacker News, accessed on May 7, 2026, <a href="https://news.ycombinator.com/item?id=43555110">https://news.ycombinator.com/item?id=43555110</a>  </li>
+<li>A Caching Strategy for Identifying Bottlenecks on the Data Input Pipeline, accessed on May 7, 2026, <a href="https://towardsdatascience.com/a-caching-strategy-for-identifying-bottlenecks-on-the-data-input-pipeline/">https://towardsdatascience.com/a-caching-strategy-for-identifying-bottlenecks-on-the-data-input-pipeline/</a>  </li>
+<li>pandas.Series.cat.rename_categories — pandas 3.0.2 documentation - PyData |, accessed on May 7, 2026, <a href="https://pandas.pydata.org/docs/reference/api/pandas.Series.cat.rename_categories.html">https://pandas.pydata.org/docs/reference/api/pandas.Series.cat.rename_categories.html</a>  </li>
+<li>pandas.Categorical.rename_categories — pandas 3.0.2 documentation - PyData |, accessed on May 7, 2026, <a href="http://pandas.pydata.org/docs/reference/api/pandas.Categorical.rename_categories.html">http://pandas.pydata.org/docs/reference/api/pandas.Categorical.rename_categories.html</a>  </li>
+<li>pandas.Series.cat.set_categories — pandas 3.0.2 documentation - PyData |, accessed on May 7, 2026, <a href="https://pandas.pydata.org/docs/reference/api/pandas.Series.cat.set_categories.html">https://pandas.pydata.org/docs/reference/api/pandas.Series.cat.set_categories.html</a>  </li>
+<li>Changing category names in a pandas data frame - Stack Overflow, accessed on May 7, 2026, <a href="https://stackoverflow.com/questions/67039036/changing-category-names-in-a-pandas-data-frame">https://stackoverflow.com/questions/67039036/changing-category-names-in-a-pandas-data-frame</a>  </li>
+<li>Copy-on-write — cudf 26.04.00 documentation - RAPIDS Docs, accessed on May 7, 2026, <a href="https://docs.rapids.ai/api/cudf/stable/user_guide/copy-on-write/">https://docs.rapids.ai/api/cudf/stable/user_guide/copy-on-write/</a>  </li>
+<li>Copy-on-Write (CoW) — pandas 3.0.2 documentation - PyData |, accessed on May 7, 2026, <a href="https://pandas.pydata.org/docs/user_guide/copy_on_write.html">https://pandas.pydata.org/docs/user_guide/copy_on_write.html</a>  </li>
+<li>Pandas 3.0's Biggest Shift: Copy-on-Write Becomes the Only Mode - Medium, accessed on May 7, 2026, <a href="https://medium.com/@sathishdba/pandas-3-0s-biggest-shift-copy-on-write-becomes-the-only-mode-87a1870a144f">https://medium.com/@sathishdba/pandas-3-0s-biggest-shift-copy-on-write-becomes-the-only-mode-87a1870a144f</a>  </li>
+<li>Deep Dive into pandas Copy-on-Write Mode - Part I - Patrick Hoefler, accessed on May 7, 2026, <a href="https://phofl.github.io/cow-deep-dive.html">https://phofl.github.io/cow-deep-dive.html</a>  </li>
+<li>Why does pandas dataframe memory usage more than double when the number of rows in the dataframe is doubled? - Stack Overflow, accessed on May 7, 2026, <a href="https://stackoverflow.com/questions/56782842/why-does-pandas-dataframe-memory-usage-more-than-double-when-the-number-of-rows">https://stackoverflow.com/questions/56782842/why-does-pandas-dataframe-memory-usage-more-than-double-when-the-number-of-rows</a>  </li>
+<li>Fixing pandas memory errors: 3 practical solutions - Google Developer forums, accessed on May 7, 2026, <a href="https://discuss.google.dev/t/fixing-pandas-memory-errors-3-practical-solutions/289622">https://discuss.google.dev/t/fixing-pandas-memory-errors-3-practical-solutions/289622</a>  </li>
+<li>MemoryError when I merge two Pandas data frames - Stack Overflow, accessed on May 7, 2026, <a href="https://stackoverflow.com/questions/47386405/memoryerror-when-i-merge-two-pandas-data-frames">https://stackoverflow.com/questions/47386405/memoryerror-when-i-merge-two-pandas-data-frames</a>  </li>
+<li>The pandas MemoryError : r/datascience - Reddit, accessed on May 7, 2026, <a href="https://www.reddit.com/r/datascience/comments/1hb0kqh/the_pandas_memoryerror/">https://www.reddit.com/r/datascience/comments/1hb0kqh/the_pandas_memoryerror/</a>  </li>
+<li>How to avoid Memory errors with Pandas | Towards Data Science, accessed on May 7, 2026, <a href="https://towardsdatascience.com/how-to-avoid-memory-errors-with-pandas-22366e1371b1/">https://towardsdatascience.com/how-to-avoid-memory-errors-with-pandas-22366e1371b1/</a>  </li>
+<li>Doing a Pandas merge on 1000000 rows x3250 columns is causing my computer to freeze. What are my options? - Reddit, accessed on May 7, 2026, <a href="https://www.reddit.com/r/learnpython/comments/l05evc/doing_a_pandas_merge_on_1000000_rows_x3250/">https://www.reddit.com/r/learnpython/comments/l05evc/doing_a_pandas_merge_on_1000000_rows_x3250/</a>  </li>
+<li>How can I handle 100 million+ rows of data with python for a machine learning project?, accessed on May 7, 2026, <a href="https://www.reddit.com/r/bigdata/comments/bybl8a/how_can_i_handle_100_million_rows_of_data_with/">https://www.reddit.com/r/bigdata/comments/bybl8a/how_can_i_handle_100_million_rows_of_data_with/</a>  </li>
+<li>Memory layout and Numpy arrays — Techniques of High-Performance Computing - Lecture Notes, accessed on May 7, 2026, <a href="https://tbetcke.github.io/hpc_lecture_notes/numpy_and_data_layouts.html">https://tbetcke.github.io/hpc_lecture_notes/numpy_and_data_layouts.html</a>  </li>
+<li>Structured arrays — NumPy v2.4 Manual, accessed on May 7, 2026, <a href="https://numpy.org/doc/stable/user/basics.rec.html">https://numpy.org/doc/stable/user/basics.rec.html</a>  </li>
+<li>NumPy Internals: An Introduction | TDS Archive - Medium, accessed on May 7, 2026, <a href="https://medium.com/data-science/numpy-internals-an-introduction-bcaafa1a68a2">https://medium.com/data-science/numpy-internals-an-introduction-bcaafa1a68a2</a>  </li>
+<li>What's new in 2.2.0 (January 19, 2024) — pandas 3.0.2 documentation - PyData |, accessed on May 7, 2026, <a href="https://pandas.pydata.org/docs/whatsnew/v2.2.0.html">https://pandas.pydata.org/docs/whatsnew/v2.2.0.html</a>  </li>
+<li>pandas 2.0 and the Arrow revolution (part I) - Marc Garcia, accessed on May 7, 2026, <a href="https://datapythonista.me/blog/pandas-20-and-the-arrow-revolution-part-i">https://datapythonista.me/blog/pandas-20-and-the-arrow-revolution-part-i</a>  </li>
+<li>Pandas 2.x + PyArrow: Memory You Can Feel | by Codastra - Medium, accessed on May 7, 2026, <a href="https://medium.com/@2nick2patel2/pandas-2-x-pyarrow-memory-you-can-feel-65726334983d">https://medium.com/@2nick2patel2/pandas-2-x-pyarrow-memory-you-can-feel-65726334983d</a>  </li>
+<li>pyarrow.compute.dictionary_encode — Apache Arrow v24.0.0, accessed on May 7, 2026, <a href="https://arrow.apache.org/docs/python/generated/pyarrow.compute.dictionary_encode.html">https://arrow.apache.org/docs/python/generated/pyarrow.compute.dictionary_encode.html</a>  </li>
+<li>Data Types and In-Memory Data Model - Apache Arrow, accessed on May 7, 2026, <a href="https://arrow.apache.org/docs/python/data.html">https://arrow.apache.org/docs/python/data.html</a>  </li>
+<li>Need for Speed: Comparing Pandas 2.0 with Four Python Speed-Up Libs (with Code), accessed on May 7, 2026, <a href="https://towardsdatascience.com/need-for-speed-comparing-pandas-2-0-with-four-python-speed-up-libs-with-code-b287e0d9b836/">https://towardsdatascience.com/need-for-speed-comparing-pandas-2-0-with-four-python-speed-up-libs-with-code-b287e0d9b836/</a>  </li>
+<li>[Python] avoid using pandas internals · Issue #35081 · apache/arrow - GitHub, accessed on May 7, 2026, <a href="https://github.com/apache/arrow/issues/35081">https://github.com/apache/arrow/issues/35081</a>  </li>
+<li>Utilizing PyArrow to improve pandas and Dask workflows - Towards Data Science, accessed on May 7, 2026, <a href="https://towardsdatascience.com/utilizing-pyarrow-to-improve-pandas-and-dask-workflows-2891d3d96d2b/">https://towardsdatascience.com/utilizing-pyarrow-to-improve-pandas-and-dask-workflows-2891d3d96d2b/</a>  </li>
+<li>pyarrow.compute.dictionary_encode — Apache Arrow v5.0.0, accessed on May 7, 2026, <a href="https://arrow.apache.org/docs/5.0/python/generated/pyarrow.compute.dictionary_encode.html">https://arrow.apache.org/docs/5.0/python/generated/pyarrow.compute.dictionary_encode.html</a>  </li>
+<li>Buffer Protocol — Python 3.14.5rc1 documentation, accessed on May 7, 2026, <a href="https://docs.python.org/3/c-api/buffer.html">https://docs.python.org/3/c-api/buffer.html</a>  </li>
+<li>Less copies in Python with the buffer protocol and memoryviews - Eli Bendersky's website, accessed on May 7, 2026, <a href="https://eli.thegreenplace.net/2011/11/28/less-copies-in-python-with-the-buffer-protocol-and-memoryviews">https://eli.thegreenplace.net/2011/11/28/less-copies-in-python-with-the-buffer-protocol-and-memoryviews</a>  </li>
+<li>pandas.Categorical.codes — pandas 3.0.2 documentation - PyData |, accessed on May 7, 2026, <a href="https://pandas.pydata.org/docs/reference/api/pandas.Categorical.codes.html">https://pandas.pydata.org/docs/reference/api/pandas.Categorical.codes.html</a>  </li>
+<li>An Introduction to the Python Buffer Protocol, accessed on May 7, 2026, <a href="https://jakevdp.github.io/blog/2014/05/05/introduction-to-the-python-buffer-protocol/">https://jakevdp.github.io/blog/2014/05/05/introduction-to-the-python-buffer-protocol/</a>  </li>
+<li>Buffer protocol and arbitrary (data) types - Ideas - Discussions on Python.org, accessed on May 7, 2026, <a href="https://discuss.python.org/t/buffer-protocol-and-arbitrary-data-types/26256">https://discuss.python.org/t/buffer-protocol-and-arbitrary-data-types/26256</a>  </li>
+<li>7 Examples to Master Categorical Data Operations with Python Pandas, accessed on May 7, 2026, <a href="https://towardsdatascience.com/7-examples-to-master-categorical-data-operations-with-python-pandas-51cdcb0228ba/">https://towardsdatascience.com/7-examples-to-master-categorical-data-operations-with-python-pandas-51cdcb0228ba/</a>  </li>
+<li>Handling categories with pandas. While dealing with pandas DataFrames… | by Kacper Łukawski | Analytics Vidhya | Medium, accessed on May 7, 2026, <a href="https://medium.com/analytics-vidhya/handling-categories-with-pandas-bfe7d28b2f91">https://medium.com/analytics-vidhya/handling-categories-with-pandas-bfe7d28b2f91</a>  </li>
+<li>The Arrow C data interface — Apache Arrow v24.0.0, accessed on May 7, 2026, <a href="https://arrow.apache.org/docs/format/CDataInterface.html">https://arrow.apache.org/docs/format/CDataInterface.html</a>  </li>
+<li>arrow/cpp/src/arrow/c/abi.h at main · apache/arrow - GitHub, accessed on May 7, 2026, <a href="https://github.com/apache/arrow/blob/main/cpp/src/arrow/c/abi.h">https://github.com/apache/arrow/blob/main/cpp/src/arrow/c/abi.h</a>  </li>
+<li>DictionaryArray in arrow::array - Rust - Docs.rs, accessed on May 7, 2026, <a href="https://docs.rs/arrow/latest/arrow/array/struct.DictionaryArray.html">https://docs.rs/arrow/latest/arrow/array/struct.DictionaryArray.html</a>  </li>
+<li>Arrow Columnar Format — Apache Arrow v24.0.0, accessed on May 7, 2026, <a href="https://arrow.apache.org/docs/format/Columnar.html">https://arrow.apache.org/docs/format/Columnar.html</a>  </li>
+<li>Glossary — Apache Arrow v24.0.0, accessed on May 7, 2026, <a href="https://arrow.apache.org/docs/format/Glossary.html">https://arrow.apache.org/docs/format/Glossary.html</a>  </li>
+<li>zarrow: a native Apache Arrow implementation in Zig - Showcase - Ziggit, accessed on May 7, 2026, <a href="https://ziggit.dev/t/zarrow-a-native-apache-arrow-implementation-in-zig/15277">https://ziggit.dev/t/zarrow-a-native-apache-arrow-implementation-in-zig/15277</a>  </li>
+<li>Serialize and Deserialize Apache Arrow with Zig - MojoAuth, accessed on May 7, 2026, <a href="https://mojoauth.com/serialize-and-deserialize/serialize-and-deserialize-apache-arrow-with-zig">https://mojoauth.com/serialize-and-deserialize/serialize-and-deserialize-apache-arrow-with-zig</a>  </li>
+<li>clickingbuttons/arrow-zig: Apache Arrow implementation - GitHub, accessed on May 7, 2026, <a href="https://github.com/clickingbuttons/arrow-zig">https://github.com/clickingbuttons/arrow-zig</a>  </li>
+<li>Pandas Integration — Apache Arrow v24.0.0, accessed on May 7, 2026, <a href="https://arrow.apache.org/docs/python/pandas.html">https://arrow.apache.org/docs/python/pandas.html</a></li>
+</ol>
+          </article>
+        </div>
+      </main>
+
+      <footer class="site-footer">
+        <div class="footer-inner">
+          <div>zh_catmut: native LUT remapping for large Pandas categorical code buffers.</div>
+          <div class="footer-links">
+            <a href="docs.html">Docs</a>
+            <a href="architecture.html">Architecture</a>
+            <a href="index.html">Landing</a>
+          </div>
+        </div>
+      </footer>
+    </div>
+    <script src="assets/js/site.js"></script>
+    
+  </body>
+</html>

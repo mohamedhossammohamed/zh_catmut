@@ -1,0 +1,639 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Detailed zh_catmut documentation for native Pandas categorical remapping.">
+    <title>zh_catmut Docs | Native categorical remapping</title>
+    <link rel="stylesheet" href="assets/css/site.css">
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <canvas class="particle-canvas" data-particles aria-hidden="true"></canvas>
+    <div class="site-shell">
+      <header class="nav">
+        <div class="nav-inner">
+          <a class="brand" href="index.html" aria-label="zh_catmut home">
+            <span class="brand-mark" aria-hidden="true"></span>
+            <span class="brand-text">
+              <span class="brand-name">zh_catmut</span>
+              <span class="brand-subtitle">docs</span>
+            </span>
+          </a>
+          <button class="nav-toggle" type="button" data-nav-toggle aria-label="Toggle navigation" aria-expanded="false"><span></span></button>
+          <nav class="nav-links" aria-label="Primary navigation">
+            <a href="index.html">Landing</a>
+            <a href="#quickstart">Quickstart</a>
+            <a href="#api-high-level">API</a>
+            <a href="#native-abi">ABI</a>
+            <a href="architecture.html">Architecture</a>
+          </nav>
+        </div>
+      </header>
+
+      <main id="main">
+        <section class="page-hero">
+          <div class="container">
+            <div class="reveal">
+              <p class="eyebrow"><span class="eyebrow-dot"></span>Documentation for the Python + Zig categorical remap engine</p>
+              <h1>Detailed docs for safe native categorical mutation.</h1>
+              <p>
+                This guide explains how zh_catmut remaps large Pandas categorical columns, when to use each API, what memory gates are enforced, and how the C ABI keeps native code small and predictable.
+              </p>
+              <div class="button-row">
+                <a class="button primary" href="#quickstart">Start quick</a>
+                <a class="button ghost" href="#native-abi">Native ABI</a>
+                <a class="button ghost" href="#troubleshooting">Troubleshooting</a>
+              </div>
+            </div>
+            <div class="page-meta reveal">
+              <div class="meta-box">
+                <strong>Runtime stack</strong>
+                <span>Python, NumPy, Pandas, ctypes, Zig shared library</span>
+              </div>
+              <div class="meta-box">
+                <strong>Core operation</strong>
+                <span><code>new_code = lut[old_code]</code></span>
+              </div>
+              <div class="meta-box">
+                <strong>Supported code dtypes</strong>
+                <span>int8, int16, int32, int64</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <div class="container docs-layout">
+          <aside class="docs-sidebar reveal" aria-label="Documentation contents">
+            <strong>Contents</strong>
+            <nav>
+              <a href="#overview" class="active">Overview</a>
+              <a href="#installation">Installation</a>
+              <a href="#quickstart">Quickstart</a>
+              <a href="#mental-model">Mental model</a>
+              <a href="#api-high-level">remap_categorical</a>
+              <a href="#api-low-level">remap_codes_inplace</a>
+              <a href="#reports">Native reports</a>
+              <a href="#safety">Safety gates</a>
+              <a href="#native-abi">Native ABI</a>
+              <a href="#memory">Memory ownership</a>
+              <a href="#errors">Errors</a>
+              <a href="#packaging">Packaging</a>
+              <a href="#patterns">Usage patterns</a>
+              <a href="#troubleshooting">Troubleshooting</a>
+              <a href="#reading-order">Reading order</a>
+            </nav>
+          </aside>
+
+          <article class="doc-article">
+            <section class="doc-section reveal" id="overview">
+              <h2>Overview</h2>
+              <p>
+                zh_catmut is a native Python package for remapping Pandas categorical code buffers through a strict C ABI. It is designed for large categorical columns where the labels are tiny metadata but the code buffer contains millions or hundreds of millions of integer rows.
+              </p>
+              <p>
+                The core idea is to keep semantic work in Python and move repetitive full-column work to native code. Python builds the target category list and an int64 lookup table. The native Zig library receives borrowed pointers and primitive fields, validates the planned remap, then mutates or copies the integer codes in one batch.
+              </p>
+              <div class="doc-grid">
+                <div class="info-box">
+                  <strong>Best fit</strong>
+                  <p>Relabeling, merging, or aligning categorical labels without expanding a full column into Python objects.</p>
+                </div>
+                <div class="info-box">
+                  <strong>Not the goal</strong>
+                  <p>Passing strings, dicts, Pandas objects, JSON, or object arrays into native code.</p>
+                </div>
+                <div class="info-box">
+                  <strong>Safety posture</strong>
+                  <p>Validate before mutation, reject ambiguous ownership, and preserve Python-owned buffers.</p>
+                </div>
+                <div class="info-box">
+                  <strong>Native primitive</strong>
+                  <p>A dense LUT remap over signed integer code buffers with missing-code preservation.</p>
+                </div>
+              </div>
+            </section>
+
+            <section class="doc-section reveal" id="installation">
+              <h2>Installation</h2>
+              <p>
+                Install the package from Python packaging infrastructure with pip:
+              </p>
+              <div class="code-panel">
+                <pre data-copy><code>pip install zh-catmut</code></pre>
+              </div>
+              <p>
+                Runtime dependencies are NumPy and Pandas. The package is intended to bundle a platform shared library inside the Python package directory: <code>libzh_catmut.so</code> on Linux, <code>libzh_catmut.dylib</code> on macOS, and <code>zh_catmut.dll</code> on Windows.
+              </p>
+              <div class="callout">
+                <strong>Prebuilt wheel expectation</strong>
+                <p>End users should not need a native compiler when installing a wheel that already includes the shared library.</p>
+              </div>
+            </section>
+
+            <section class="doc-section reveal" id="quickstart">
+              <h2>Quickstart</h2>
+              <p>
+                Use the high-level API when working with Pandas objects. The return type mirrors the input: a Series returns a Series with the same index and name, while a Categorical returns a Categorical.
+              </p>
+              <div class="code-panel">
+                <pre data-copy><code>import pandas as pd
+from zh_catmut import remap_categorical
+
+s = pd.Series(
+    pd.Categorical(["new", "old", "old", None]),
+    name="status",
+)
+
+out = remap_categorical(
+    s,
+    {"old": "new"},
+    copy_fallback=True,
+)
+
+print(out.tolist())</code></pre>
+              </div>
+              <p>
+                <code>copy_fallback=True</code> is the practical default for callers who want safety without reasoning about Pandas Copy-on-Write ownership. It allocates a Python-owned destination codes buffer and leaves the original source buffer unchanged.
+              </p>
+            </section>
+
+            <section class="doc-section reveal" id="mental-model">
+              <h2>Mental model</h2>
+              <p>
+                Pandas categoricals are dictionary encoded. The category labels are stored once, while the full column is stored as a dense integer array. Missing values use the sentinel code <code>-1</code>.
+              </p>
+              <div class="mini-diagram">
+                <div class="diagram-node">
+                  <strong>categories</strong>
+                  <code>0 → "pending"</code><br>
+                  <code>1 → "active"</code><br>
+                  <code>2 → "old"</code>
+                </div>
+                <div class="diagram-node">
+                  <strong>codes</strong>
+                  <code>[0, 2, 1, -1]</code><br>
+                  <code>dtype=int8</code><br>
+                  <code>contiguous</code>
+                </div>
+                <div class="diagram-node">
+                  <strong>lut</strong>
+                  <code>[0, 1, 1]</code><br>
+                  <code>new_code = lut[old_code]</code>
+                </div>
+              </div>
+              <p>
+                If <code>"old"</code> maps to <code>"active"</code>, Python builds a target category list and a lookup table where the old code for <code>"old"</code> points at the target code for <code>"active"</code>. Native code never needs to understand the label values.
+              </p>
+              <div class="sequence">
+                <div class="sequence-item">
+                  <div class="sequence-index">1</div>
+                  <div class="sequence-copy">
+                    <strong>Label mapping</strong>
+                    <span>Python applies the mapping to old categories and deduplicates target categories in first-seen order.</span>
+                  </div>
+                </div>
+                <div class="sequence-item">
+                  <div class="sequence-index">2</div>
+                  <div class="sequence-copy">
+                    <strong>LUT construction</strong>
+                    <span>Each old category index receives one int64 target category index.</span>
+                  </div>
+                </div>
+                <div class="sequence-item">
+                  <div class="sequence-index">3</div>
+                  <div class="sequence-copy">
+                    <strong>Pointer export</strong>
+                    <span>After gates pass, Python exports code-buffer and LUT pointers through ctypes.</span>
+                  </div>
+                </div>
+                <div class="sequence-item">
+                  <div class="sequence-index">4</div>
+                  <div class="sequence-copy">
+                    <strong>Native remap</strong>
+                    <span>Zig validates every code and mapped output before executing mutation or copy.</span>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section class="doc-section reveal" id="api-high-level">
+              <h2>High-level API: remap_categorical</h2>
+              <div class="code-panel">
+                <pre data-copy><code>def remap_categorical(
+    obj: pd.Series | pd.Categorical,
+    mapping: Mapping[object, object],
+    *,
+    assume_unique: bool = False,
+    copy_fallback: bool = False,
+    threads: int = 0,
+) -> pd.Series | pd.Categorical:
+    ...</code></pre>
+              </div>
+              <p>
+                This is the ergonomic API for category label remapping. Categories not present in <code>mapping</code> are preserved. Multiple source labels may map to the same target label, and target categories preserve first-seen order after deduplication.
+              </p>
+              <table class="doc-table">
+                <thead>
+                  <tr>
+                    <th>Parameter</th>
+                    <th>Meaning</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><code>obj</code></td>
+                    <td>A Pandas Series with categorical dtype or a <code>pd.Categorical</code>.</td>
+                  </tr>
+                  <tr>
+                    <td><code>mapping</code></td>
+                    <td>A mapping from old labels to new labels. Missing mapping keys keep their original labels.</td>
+                  </tr>
+                  <tr>
+                    <td><code>assume_unique</code></td>
+                    <td>Opt-in escape hatch for controlled in-place mutation after all other gates pass.</td>
+                  </tr>
+                  <tr>
+                    <td><code>copy_fallback</code></td>
+                    <td>Allocates a destination buffer and uses the native copy path when in-place ownership is not desired.</td>
+                  </tr>
+                  <tr>
+                    <td><code>threads</code></td>
+                    <td>Forwarded to the native call. The current scalar implementation accepts the parameter.</td>
+                  </tr>
+                </tbody>
+              </table>
+              <h3>Return behavior</h3>
+              <ul>
+                <li>Series input returns a Series preserving index and name.</li>
+                <li>Categorical input returns a new Categorical.</li>
+                <li>Missing values stay missing.</li>
+                <li>Ordered categoricals preserve the original ordered flag.</li>
+              </ul>
+              <div class="callout warning">
+                <strong>In-place mode is intentionally strict</strong>
+                <p>Without <code>copy_fallback=True</code> or <code>assume_unique=True</code>, high-level mutation is rejected when unique ownership cannot be proven.</p>
+              </div>
+            </section>
+
+            <section class="doc-section reveal" id="api-low-level">
+              <h2>Low-level API: remap_codes_inplace</h2>
+              <div class="code-panel">
+                <pre data-copy><code>def remap_codes_inplace(
+    codes: np.ndarray,
+    lut: np.ndarray,
+    *,
+    target_category_count: int,
+    missing_code: int = -1,
+    allow_missing: bool = True,
+    threads: int = 0,
+) -> NativeExecutionReport:
+    ...</code></pre>
+              </div>
+              <p>
+                Use this only when you already own the codes array and have already built a correct dense int64 lookup table. This API mutates <code>codes</code> in place after Python and native validation succeed.
+              </p>
+              <table class="doc-table">
+                <thead>
+                  <tr>
+                    <th>Input</th>
+                    <th>Requirement</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><code>codes</code></td>
+                    <td>One-dimensional, C-contiguous NumPy array with dtype <code>int8</code>, <code>int16</code>, <code>int32</code>, or <code>int64</code>.</td>
+                  </tr>
+                  <tr>
+                    <td><code>lut</code></td>
+                    <td>One-dimensional, C-contiguous NumPy array with dtype <code>int64</code>.</td>
+                  </tr>
+                  <tr>
+                    <td><code>target_category_count</code></td>
+                    <td>Every mapped non-missing code must be in <code>[0, target_category_count)</code>.</td>
+                  </tr>
+                  <tr>
+                    <td><code>missing_code</code></td>
+                    <td>Missing sentinel, defaulting to <code>-1</code> to match Pandas categorical codes.</td>
+                  </tr>
+                  <tr>
+                    <td><code>allow_missing</code></td>
+                    <td>When false, missing input codes or missing LUT outputs are rejected before mutation.</td>
+                  </tr>
+                </tbody>
+              </table>
+              <div class="code-panel">
+                <pre data-copy><code>import numpy as np
+from zh_catmut import remap_codes_inplace
+
+codes = np.array([0, 1, 2, -1], dtype=np.int16)
+lut = np.array([0, 0, 1], dtype=np.int64)
+
+report = remap_codes_inplace(
+    codes,
+    lut,
+    target_category_count=2,
+)
+
+assert codes.tolist() == [0, 0, 1, -1]
+assert report.item_count == 4</code></pre>
+              </div>
+            </section>
+
+            <section class="doc-section reveal" id="reports">
+              <h2>Native reports</h2>
+              <p>
+                Native calls return plain report structs that are wrapped as frozen Python dataclasses. These reports make validation and execution observable without exposing native memory ownership to Python.
+              </p>
+              <h3>NativeExecutionReport fields</h3>
+              <table class="doc-table">
+                <thead>
+                  <tr>
+                    <th>Field</th>
+                    <th>Description</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><td><code>abi_version</code></td><td>ABI version reported by the native shared library.</td></tr>
+                  <tr><td><code>status</code></td><td>Native status integer for the call.</td></tr>
+                  <tr><td><code>flags</code></td><td>Execution flags used for validation, counts, missing handling, and threading intent.</td></tr>
+                  <tr><td><code>item_count</code></td><td>Number of code elements considered.</td></tr>
+                  <tr><td><code>changed_count</code></td><td>Number of elements whose code changed when counts are collected.</td></tr>
+                  <tr><td><code>missing_count</code></td><td>Number of missing-code elements when counts are collected.</td></tr>
+                  <tr><td><code>invalid_input_count</code></td><td>Count of source codes that cannot index the LUT or violate missing policy.</td></tr>
+                  <tr><td><code>invalid_output_count</code></td><td>Count of mapped codes outside the target category range or missing policy.</td></tr>
+                  <tr><td><code>first_invalid_index</code></td><td>First invalid element index, or <code>None</code> when no invalid element exists.</td></tr>
+                  <tr><td><code>first_invalid_code</code></td><td>Source code recorded for the first invalid element.</td></tr>
+                  <tr><td><code>first_invalid_mapped_code</code></td><td>Mapped code recorded for the first invalid element when available.</td></tr>
+                </tbody>
+              </table>
+            </section>
+
+            <section class="doc-section reveal" id="safety">
+              <h2>Safety gates</h2>
+              <p>
+                zh_catmut treats native mutation as a privileged final step. Python-side gates run before pointer export, and native validation runs before a mutation path writes anything.
+              </p>
+              <div class="doc-grid">
+                <div class="info-box">
+                  <strong>Dtype gate</strong>
+                  <p>Codes must be signed integer categorical code dtypes: int8, int16, int32, or int64.</p>
+                </div>
+                <div class="info-box">
+                  <strong>Shape gate</strong>
+                  <p>Codes and LUT arrays must be one-dimensional and C-contiguous.</p>
+                </div>
+                <div class="info-box">
+                  <strong>Bounds gate</strong>
+                  <p>Lengths, target category counts, missing codes, and thread counts are checked before native calls.</p>
+                </div>
+                <div class="info-box">
+                  <strong>Writeability gate</strong>
+                  <p>NumPy writeability is temporarily managed for the native call and restored afterward.</p>
+                </div>
+                <div class="info-box">
+                  <strong>CoW gate</strong>
+                  <p>High-level in-place mutation is rejected when Pandas storage sharing cannot be ruled out.</p>
+                </div>
+                <div class="info-box">
+                  <strong>Native gate</strong>
+                  <p>The Zig predictor validates source and target ranges before mutation.</p>
+                </div>
+              </div>
+              <div class="callout">
+                <strong>All-or-nothing mutation</strong>
+                <p>If native validation detects an invalid source code, invalid mapped code, null pointer, unsupported dtype, or oversized length, the in-place mutation path fails before writing elements.</p>
+              </div>
+            </section>
+
+            <section class="doc-section reveal" id="native-abi">
+              <h2>Native ABI</h2>
+              <p>
+                The native library exposes stable C symbols and is loaded through <code>ctypes.CDLL</code>. The loader declares exact argument and return types, then verifies that the native ABI version matches the Python wrapper expectation.
+              </p>
+              <div class="code-panel">
+                <pre data-copy><code>zhcm_abi_version
+zhcm_status_message
+zhcm_predict_remap_lut
+zhcm_remap_lut_inplace
+zhcm_remap_lut_copy</code></pre>
+              </div>
+              <p>
+                Native functions receive only primitive data:
+              </p>
+              <ul>
+                <li><code>void *</code> or <code>const void *</code> pointers for code buffers.</li>
+                <li><code>int64_t *</code> pointer for the dense LUT.</li>
+                <li><code>uintptr_t</code> lengths.</li>
+                <li>Integer dtype IDs.</li>
+                <li>Primitive flags.</li>
+                <li>Caller-allocated report structs.</li>
+              </ul>
+              <p>
+                Native code never stores borrowed pointers after return, frees Python-owned buffers, calls the Python C API, accepts Python objects, or writes outside the logical element count.
+              </p>
+            </section>
+
+            <section class="doc-section reveal" id="memory">
+              <h2>Memory ownership</h2>
+              <p>
+                V1 is Python-owned-buffer-only. The native library does not allocate output buffers. In copy fallback mode, Python allocates <code>np.empty_like(codes)</code> and passes both source and destination pointers to native code.
+              </p>
+              <div class="sequence">
+                <div class="sequence-item">
+                  <div class="sequence-index">A</div>
+                  <div class="sequence-copy">
+                    <strong>In-place path</strong>
+                    <span>Mutates <code>codes[0:item_count]</code> only after safety and native prediction gates succeed.</span>
+                  </div>
+                </div>
+                <div class="sequence-item">
+                  <div class="sequence-index">B</div>
+                  <div class="sequence-copy">
+                    <strong>Copy path</strong>
+                    <span>Reads source codes and writes a Python-owned destination buffer, preserving the input.</span>
+                  </div>
+                </div>
+                <div class="sequence-item">
+                  <div class="sequence-index">C</div>
+                  <div class="sequence-copy">
+                    <strong>Cleanup</strong>
+                    <span>Python keeps arrays alive for the duration of ctypes calls and restores temporary writeability in a final boundary.</span>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section class="doc-section reveal" id="errors">
+              <h2>Errors</h2>
+              <p>
+                Errors are grouped by where the failure occurs. Python-side gate failures use Python exceptions directly. Native status failures are converted into <code>NativeStatusError</code> with the native message and report attached.
+              </p>
+              <table class="doc-table">
+                <thead>
+                  <tr>
+                    <th>Exception</th>
+                    <th>When it appears</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><code>ZhCatmutError</code></td>
+                    <td>Base exception for package-specific failures.</td>
+                  </tr>
+                  <tr>
+                    <td><code>NativeLibraryLoadError</code></td>
+                    <td>The bundled native library cannot be loaded or the ABI version mismatches.</td>
+                  </tr>
+                  <tr>
+                    <td><code>NativeStatusError</code></td>
+                    <td>A native function returns a non-zero status.</td>
+                  </tr>
+                  <tr>
+                    <td><code>MemoryGateError</code></td>
+                    <td>Python rejects shape, dtype, contiguity, bounds, or other memory invariants.</td>
+                  </tr>
+                  <tr>
+                    <td><code>CopyOnWriteSafetyError</code></td>
+                    <td>High-level in-place mutation cannot be proven safe under Pandas Copy-on-Write checks.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </section>
+
+            <section class="doc-section reveal" id="packaging">
+              <h2>Packaging and distribution</h2>
+              <p>
+                The package metadata uses setuptools as the build backend. The build process invokes Zig to compile the shared library, then copies the resulting platform library into the Python package directory so it can be loaded through <code>importlib.resources</code>.
+              </p>
+              <div class="doc-grid">
+                <div class="info-box">
+                  <strong>Python package</strong>
+                  <p>Source lives under <code>src/zh_catmut</code> and exports <code>remap_categorical</code> plus <code>remap_codes_inplace</code>.</p>
+                </div>
+                <div class="info-box">
+                  <strong>Native source</strong>
+                  <p>Zig build configuration lives under <code>native/build.zig</code> with native implementation under <code>native/src/root.zig</code>.</p>
+                </div>
+                <div class="info-box">
+                  <strong>C header</strong>
+                  <p>The ABI contract is represented by <code>include/zh_catmut_abi.h</code>.</p>
+                </div>
+                <div class="info-box">
+                  <strong>Package data</strong>
+                  <p>Shared library names are included as package data for Linux, macOS, and Windows.</p>
+                </div>
+              </div>
+            </section>
+
+            <section class="doc-section reveal" id="patterns">
+              <h2>Usage patterns</h2>
+              <h3>Safe production remap</h3>
+              <p>
+                Prefer <code>copy_fallback=True</code> when the source Series might share storage or when preserving the original input is important.
+              </p>
+              <div class="code-panel">
+                <pre data-copy><code>out = remap_categorical(
+    df["status"],
+    {"pending": "active", "legacy_disabled": "disabled"},
+    copy_fallback=True,
+)</code></pre>
+              </div>
+              <h3>Controlled in-place remap</h3>
+              <p>
+                Use <code>assume_unique=True</code> only when you control the data lifecycle and know the categorical codes buffer is uniquely owned.
+              </p>
+              <div class="code-panel">
+                <pre data-copy><code>out = remap_categorical(
+    series,
+    {"old": "new"},
+    assume_unique=True,
+)</code></pre>
+              </div>
+              <h3>Low-level buffer remap</h3>
+              <p>
+                Use the low-level API for integration code that already owns the NumPy buffer and can construct a dense LUT without Pandas labels.
+              </p>
+              <div class="code-panel">
+                <pre data-copy><code>report = remap_codes_inplace(
+    codes,
+    lut,
+    target_category_count=len(target_categories),
+    allow_missing=True,
+)</code></pre>
+              </div>
+            </section>
+
+            <section class="doc-section reveal" id="troubleshooting">
+              <h2>Troubleshooting</h2>
+              <div class="faq">
+                <details open>
+                  <summary>I get CopyOnWriteSafetyError.</summary>
+                  <p>Use <code>copy_fallback=True</code> unless you can prove that the categorical codes buffer is uniquely owned. This is the expected safe path for shared Pandas storage.</p>
+                </details>
+                <details>
+                  <summary>I get unsupported codes dtype.</summary>
+                  <p>The low-level codes array must be a NumPy ndarray with dtype <code>int8</code>, <code>int16</code>, <code>int32</code>, or <code>int64</code>. Object arrays and unsigned integer arrays are rejected.</p>
+                </details>
+                <details>
+                  <summary>I get a contiguity or shape error.</summary>
+                  <p>The codes and LUT arrays must be one-dimensional and C-contiguous. Convert or copy non-contiguous arrays before calling the low-level API.</p>
+                </details>
+                <details>
+                  <summary>I get NativeLibraryLoadError.</summary>
+                  <p>The bundled shared library is missing, cannot be loaded by the platform dynamic loader, or reports an unexpected ABI version. Reinstall the package or rebuild the native library for the current platform.</p>
+                </details>
+                <details>
+                  <summary>Should I pass threads?</summary>
+                  <p>The API accepts a thread request for ABI stability and future native kernels. The current implementation uses the scalar native remap path.</p>
+                </details>
+              </div>
+            </section>
+
+            <section class="doc-section reveal" id="reading-order">
+              <h2>Reading order</h2>
+              <p>
+                For deeper engineering context, continue through the repository documentation in this order:
+              </p>
+              <div class="deep-links">
+                <a class="doc-card" href="01-categorical-internals-and-memory.html">
+                  <small>01</small>
+                  <h3>Categorical internals</h3>
+                  <p>Understand the Pandas memory model and the object-mode fallback bottleneck.</p>
+                </a>
+                <a class="doc-card" href="02-ffi-zero-copy-architecture.html">
+                  <small>02</small>
+                  <h3>FFI architecture</h3>
+                  <p>Understand the zero-copy C ABI boundary and buffer protocol safety model.</p>
+                </a>
+                <a class="doc-card" href="03-performance-algorithms.html">
+                  <small>03</small>
+                  <h3>Performance algorithms</h3>
+                  <p>Understand cache locality, SIMD direction, threading, and LUT strategies.</p>
+                </a>
+                <a class="doc-card" href="04-build-systems-and-distribution.html">
+                  <small>04</small>
+                  <h3>Build and distribution</h3>
+                  <p>Understand wheels, build systems, CI matrices, and dynamic library loading.</p>
+                </a>
+              </div>
+            </section>
+          </article>
+        </div>
+      </main>
+
+      <footer class="site-footer">
+        <div class="footer-inner">
+          <div>Detailed zh_catmut documentation for safe native remapping.</div>
+          <div class="footer-links">
+            <a href="index.html">Landing</a>
+            <a href="architecture.html">Architecture</a>
+            <a href="README.html">Docs index</a>
+          </div>
+        </div>
+      </footer>
+    </div>
+    <script src="assets/js/site.js"></script>
+  </body>
+</html>

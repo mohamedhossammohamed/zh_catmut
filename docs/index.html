@@ -1,0 +1,369 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="zh_catmut remaps huge Pandas categorical columns through a Python safety layer and Zig native core.">
+    <title>zh_catmut | Native categorical remapping for Pandas</title>
+    <link rel="stylesheet" href="assets/css/site.css">
+  </head>
+  <body class="landing">
+    <a class="skip-link" href="#main">Skip to content</a>
+    <canvas class="particle-canvas" data-particles aria-hidden="true"></canvas>
+    <div class="site-shell">
+      <header class="nav">
+        <div class="nav-inner">
+          <a class="brand" href="index.html" aria-label="zh_catmut home">
+            <span class="brand-mark" aria-hidden="true"></span>
+            <span class="brand-text">
+              <span class="brand-name">zh_catmut</span>
+              <span class="brand-subtitle">categorical mutation core</span>
+            </span>
+          </a>
+          <button class="nav-toggle" type="button" data-nav-toggle aria-label="Toggle navigation" aria-expanded="false"><span></span></button>
+          <nav class="nav-links" aria-label="Primary navigation">
+            <a href="#problem">Problem</a>
+            <a href="#architecture">Architecture</a>
+            <a href="#api">API</a>
+            <a href="docs.html">Docs</a>
+            <a href="README.html">Readme</a>
+          </nav>
+        </div>
+      </header>
+
+      <main id="main">
+        <section class="hero container">
+          <div class="hero-copy reveal">
+            <p class="eyebrow"><span class="eyebrow-dot"></span>Python metadata. Zig throughput. C ABI discipline.</p>
+            <h1>Remap categorical columns at native speed.</h1>
+            <p class="hero-lede">
+              <strong>zh_catmut</strong> targets the dense integer payload inside Pandas categoricals. It keeps labels and category reconciliation in Python, then sends raw contiguous code buffers through a narrow ABI to a bundled Zig remapping core.
+            </p>
+            <div class="hero-actions">
+              <a class="button primary" href="docs.html">Open the docs</a>
+              <a class="button ghost" href="#quickstart">See quickstart</a>
+              <a class="button ghost" href="architecture.html">Architecture notes</a>
+            </div>
+            <div class="hero-badges" aria-label="Technology badges">
+              <span class="badge"><i></i>Python 3.9+</span>
+              <span class="badge"><i></i>Zig native core</span>
+              <span class="badge"><i></i>Pandas categorical</span>
+            </div>
+            <div class="hero-metrics">
+              <div class="metric">
+                <strong>zero object arrays</strong>
+                <span>labels never cross native</span>
+              </div>
+              <div class="metric">
+                <strong>all-or-nothing</strong>
+                <span>predictive validation first</span>
+              </div>
+              <div class="metric">
+                <strong>ctypes.CDLL</strong>
+                <span>GIL released in native call</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="hero-visual reveal" aria-label="Animated native remapping visualization">
+            <div class="hero-orb" aria-hidden="true"></div>
+            <span class="floating-chip chip-a"><i></i>codes: int8 / int16 / int32 / int64</span>
+            <span class="floating-chip chip-b"><i></i>new_code = lut[old_code]</span>
+            <span class="floating-chip chip-c"><i></i>Copy-on-Write aware</span>
+            <div class="machine-card">
+              <div class="machine-top">
+                <div class="traffic" aria-hidden="true"><span></span><span></span><span></span></div>
+                <div class="machine-title">native categorical remap pipeline</div>
+              </div>
+              <div class="machine-body">
+                <div class="code-window">
+                  <pre><code><span class="tok-blue">from</span> zh_catmut <span class="tok-blue">import</span> remap_categorical
+
+out = remap_categorical(
+    series,
+    {<span class="tok-green">"pending"</span>: <span class="tok-green">"active"</span>,
+     <span class="tok-green">"disabled_old"</span>: <span class="tok-green">"disabled"</span>},
+    copy_fallback=<span class="tok-orange">True</span>,
+)</code></pre>
+                </div>
+                <div class="pipeline">
+                  <div class="pipeline-node node-python">
+                    <strong>Python</strong>
+                    <span>builds dense int64 lookup table from labels</span>
+                  </div>
+                  <div class="pipeline-node node-abi">
+                    <strong>C ABI</strong>
+                    <span>borrows pointers, lengths, dtype IDs, flags</span>
+                  </div>
+                  <div class="pipeline-node node-zig">
+                    <strong>Zig</strong>
+                    <span>validates, then remaps contiguous codes</span>
+                  </div>
+                  <div class="pipeline-node node-pandas">
+                    <strong>Pandas</strong>
+                    <span>reattaches categories without object expansion</span>
+                  </div>
+                </div>
+                <div class="buffer-stack" aria-hidden="true">
+                  <div class="buffer-line"></div>
+                  <div class="buffer-line"></div>
+                  <div class="buffer-line"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="section tight" id="problem">
+          <div class="container">
+            <div class="section-head reveal">
+              <div>
+                <div class="section-kicker">The bottleneck</div>
+                <h2>Huge categoricals are compact until remapping gets expensive.</h2>
+              </div>
+              <p>
+                A Pandas categorical stores a small category dictionary plus one dense signed integer code per row. High-level relabeling and alignment can allocate replacement arrays, masks, or object-mode intermediates. zh_catmut goes straight to the integer buffer.
+              </p>
+            </div>
+            <div class="grid-2 compare">
+              <div class="panel compare-card bad reveal">
+                <h3><span></span>High-level remapping path</h3>
+                <p>Convenient APIs can perform full-column re-encoding work or allocate temporary buffers that dominate runtime and memory pressure on very large columns.</p>
+                <div class="code-panel">
+                  <pre data-copy><code>series = series.cat.rename_categories({
+    "pending": "active",
+})
+series = series.cat.set_categories([
+    "active",
+    "disabled",
+])</code></pre>
+                </div>
+              </div>
+              <div class="panel compare-card good reveal">
+                <h3><span></span>zh_catmut remapping path</h3>
+                <p>Build the mapping once from metadata, validate every invariant, then mutate or copy the dense integer codes in one native batch.</p>
+                <div class="code-panel">
+                  <pre data-copy><code>from zh_catmut import remap_categorical
+
+series = remap_categorical(
+    series,
+    {"pending": "active"},
+    copy_fallback=True,
+)</code></pre>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="section" id="architecture">
+          <div class="container">
+            <div class="section-head reveal">
+              <div>
+                <div class="section-kicker">Design language</div>
+                <h2>A safety gate wrapped around a very small native primitive.</h2>
+              </div>
+              <p>
+                The project has a systems vibe: dark data planes, ABI seams, zero-copy intent, and a hot loop that only knows integers. The website mirrors that with glass panels, signal colors, and moving code-buffer traces.
+              </p>
+            </div>
+            <div class="flow-map">
+              <div class="flow-step reveal">
+                <h3>Categorical metadata</h3>
+                <p>Python reads the old categories and mapping, then creates target categories in first-seen order.</p>
+              </div>
+              <div class="flow-step reveal">
+                <h3>Dense LUT</h3>
+                <p>Each source category index maps to a new category index through one contiguous int64 array.</p>
+              </div>
+              <div class="flow-step reveal">
+                <h3>Memory gates</h3>
+                <p>Shape, dtype, contiguity, integer bounds, writeability, and CoW safety are checked before pointers leave Python.</p>
+              </div>
+              <div class="flow-step reveal">
+                <h3>Native validation</h3>
+                <p>Zig predicts the remap and rejects invalid source codes, invalid outputs, and missing-policy violations before mutation.</p>
+              </div>
+              <div class="flow-step reveal">
+                <h3>Batch remap</h3>
+                <p>The native core executes the LUT loop and returns a POD execution report with counts and status fields.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="container">
+            <div class="section-head reveal">
+              <div>
+                <div class="section-kicker">What makes it fast</div>
+                <h2>Move the full-column work to native code. Keep the meaning in Python.</h2>
+              </div>
+              <p>
+                The API is intentionally narrow. Category labels, dictionaries, Pandas objects, strings, JSON, and object arrays do not enter native code. The native core only receives borrowed primitive memory.
+              </p>
+            </div>
+            <div class="grid-4">
+              <div class="card reveal">
+                <div class="card-icon">LUT</div>
+                <h3>Dense lookup table</h3>
+                <p>Category remapping becomes the simple operation <code>new_code = lut[old_code]</code>.</p>
+              </div>
+              <div class="card reveal">
+                <div class="card-icon zig">Zig</div>
+                <h3>Native loop</h3>
+                <p>A bundled shared library handles int8, int16, int32, and int64 code buffers.</p>
+              </div>
+              <div class="card reveal">
+                <div class="card-icon violet">ABI</div>
+                <h3>Strict C boundary</h3>
+                <p>Only pointers, lengths, dtype IDs, flags, and report structs cross the boundary.</p>
+              </div>
+              <div class="card reveal">
+                <div class="card-icon pandas">CoW</div>
+                <h3>Pandas-safe return</h3>
+                <p>The result is reattached through <code>pd.Categorical.from_codes(..., validate=False)</code> after validation.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="section" id="quickstart">
+          <div class="container">
+            <div class="terminal-strip">
+              <div class="panel terminal-card reveal">
+                <div class="terminal-title"><strong>Install</strong><span>pip</span></div>
+                <div class="code-panel">
+                  <pre data-copy><code>pip install zh-catmut</code></pre>
+                </div>
+                <p>
+                  Wheels bundle the platform native library so end users do not need a Zig compiler when installing a prebuilt package.
+                </p>
+              </div>
+              <div class="panel terminal-card reveal">
+                <div class="terminal-title"><strong>Quickstart</strong><span>Pandas</span></div>
+                <div class="code-panel">
+                  <pre data-copy><code>import pandas as pd
+from zh_catmut import remap_categorical
+
+s = pd.Series(pd.Categorical([
+    "new",
+    "old",
+    "old",
+    None,
+]))
+
+out = remap_categorical(
+    s,
+    {"old": "new"},
+    copy_fallback=True,
+)</code></pre>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="section" id="api">
+          <div class="container">
+            <div class="section-head reveal">
+              <div>
+                <div class="section-kicker">Public API</div>
+                <h2>Two entry points: one high-level, one low-level.</h2>
+              </div>
+              <p>
+                Use <code>remap_categorical</code> when you have Pandas objects. Use <code>remap_codes_inplace</code> only when you own a writable, contiguous NumPy codes buffer and a dense int64 LUT.
+              </p>
+            </div>
+            <div class="api-split">
+              <div class="api-list reveal">
+                <div class="api-item">
+                  <strong>remap_categorical(obj, mapping, *, assume_unique=False, copy_fallback=False, threads=0)</strong>
+                  <span>High-level category-label remapping for <code>pd.Series</code> with categorical dtype or <code>pd.Categorical</code>.</span>
+                </div>
+                <div class="api-item">
+                  <strong>remap_codes_inplace(codes, lut, *, target_category_count, missing_code=-1, allow_missing=True, threads=0)</strong>
+                  <span>Low-level native remap for a contiguous signed integer NumPy codes buffer.</span>
+                </div>
+                <div class="api-item">
+                  <strong>NativeExecutionReport</strong>
+                  <span>Frozen dataclass containing ABI version, status, flags, item counts, changed counts, missing counts, and first-invalid diagnostics.</span>
+                </div>
+              </div>
+              <div class="panel compare-card reveal">
+                <h3>Minimal low-level call</h3>
+                <div class="code-panel">
+                  <pre data-copy><code>import numpy as np
+from zh_catmut import remap_codes_inplace
+
+codes = np.array([0, 1, 1, -1], dtype=np.int8)
+lut = np.array([0, 0], dtype=np.int64)
+
+report = remap_codes_inplace(
+    codes,
+    lut,
+    target_category_count=1,
+)
+
+assert codes.tolist() == [0, 0, 0, -1]</code></pre>
+                </div>
+              </div>
+            </div>
+            <div class="button-row reveal">
+              <a class="button primary" href="docs.html#api-high-level">Read API details</a>
+              <a class="button ghost" href="docs.html#native-abi">Study the native ABI</a>
+            </div>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="container">
+            <div class="section-head reveal">
+              <div>
+                <div class="section-kicker">Deep documentation</div>
+                <h2>Follow the layers from Pandas memory to packaged wheels.</h2>
+              </div>
+              <p>
+                The detailed docs page distills the repository’s architecture notes into a navigable guide, and the original technical documents remain available for deeper reading.
+              </p>
+            </div>
+            <div class="deep-links">
+              <a class="doc-card reveal" href="docs.html">
+                <small>Guide</small>
+                <h3>Detailed docs page</h3>
+                <p>Install, quickstart, API semantics, safety gates, native reports, errors, packaging, and troubleshooting.</p>
+              </a>
+              <a class="doc-card reveal" href="01-categorical-internals-and-memory.html">
+                <small>01</small>
+                <h3>Categorical internals</h3>
+                <p>Pandas memory layout, dictionary encoding, and why object-mode fallback hurts.</p>
+              </a>
+              <a class="doc-card reveal" href="02-ffi-zero-copy-architecture.html">
+                <small>02</small>
+                <h3>FFI boundary</h3>
+                <p>C ABI safety, pointer handoff, borrowed buffers, and zero-copy mutation mechanics.</p>
+              </a>
+              <a class="doc-card reveal" href="03-performance-algorithms.html">
+                <small>03</small>
+                <h3>Performance algorithms</h3>
+                <p>Cache locality, SIMD direction, threading plans, and lookup table strategies.</p>
+              </a>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer class="site-footer">
+        <div class="footer-inner">
+          <div>zh_catmut: native LUT remapping for large Pandas categorical code buffers.</div>
+          <div class="footer-links">
+            <a href="docs.html">Docs</a>
+            <a href="architecture.html">Architecture</a>
+            <a href="launch-kit.html">Launch kit</a>
+          </div>
+        </div>
+      </footer>
+    </div>
+    <script src="assets/js/site.js"></script>
+  </body>
+</html>
