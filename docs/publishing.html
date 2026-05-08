@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="PyPI release workflow, trusted publishing setup, and install verification for zh_catmut.">
+    <title>zh_catmut | Publishing to PyPI</title>
+    <!-- Social preview -->
+    <meta name="title" content="zh_catmut | Publishing to PyPI">
+    <link rel="canonical" href="https://mohamedhossammohamed.github.io/zh_catmut/publishing.html">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="zh_catmut">
+    <meta property="og:url" content="https://mohamedhossammohamed.github.io/zh_catmut/publishing.html">
+    <meta property="og:title" content="zh_catmut | Publishing to PyPI">
+    <meta property="og:description" content="PyPI release workflow, trusted publishing setup, and install verification for zh_catmut.">
+    <meta property="og:image" content="https://mohamedhossammohamed.github.io/zh_catmut/assets/social/og-image.png">
+    <meta property="og:image:secure_url" content="https://mohamedhossammohamed.github.io/zh_catmut/assets/social/og-image.png">
+    <meta property="og:image:type" content="image/png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="zh_catmut native Pandas categorical remapping preview card">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:site" content="@MohamedHz72007">
+    <meta name="twitter:creator" content="@MohamedHz72007">
+    <meta name="twitter:url" content="https://mohamedhossammohamed.github.io/zh_catmut/publishing.html">
+    <meta name="twitter:title" content="zh_catmut | Publishing to PyPI">
+    <meta name="twitter:description" content="PyPI release workflow, trusted publishing setup, and install verification for zh_catmut.">
+    <meta name="twitter:image" content="https://mohamedhossammohamed.github.io/zh_catmut/assets/social/og-image.png">
+    <meta name="twitter:image:alt" content="zh_catmut native Pandas categorical remapping preview card">
+    <!-- /Social preview -->
+    <link rel="stylesheet" href="assets/css/site.css">
+
+    <style>
+      .md-article h1{font-size:2.2rem;margin:2.2rem 0 1rem}
+      .md-article h2{font-size:1.6rem;margin:2rem 0 0.8rem;color:var(--python)}
+      .md-article h3{font-size:1.25rem;margin:1.4rem 0 0.6rem;color:var(--cyan)}
+      .md-article p{line-height:1.75;margin:0.8rem 0}
+      .md-article ul,.md-article ol{margin:0.8rem 0;padding-left:1.4rem}
+      .md-article li{margin:0.35rem 0}
+      .md-article code{background:rgba(255,255,255,0.06);padding:0.15rem 0.4rem;border-radius:6px;font-size:0.92em}
+      .md-article pre{background:rgba(0,0,0,0.35);border:1px solid var(--line);border-radius:14px;padding:1.1rem 1.3rem;overflow-x:auto}
+      .md-article pre code{background:none;padding:0}
+      .md-article a{color:var(--python);text-decoration:underline;text-underline-offset:3px}
+    </style>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <canvas class="particle-canvas" data-particles aria-hidden="true"></canvas>
+    <div class="site-shell">
+      <header class="nav">
+        <div class="nav-inner">
+          <a class="brand" href="index.html" aria-label="zh_catmut home">
+            <span class="brand-mark" aria-hidden="true"></span>
+            <span class="brand-text">
+              <span class="brand-name">zh_catmut</span>
+              <span class="brand-subtitle">publishing</span>
+            </span>
+          </a>
+          <button class="nav-toggle" type="button" data-nav-toggle aria-label="Toggle navigation" aria-expanded="false"><span></span></button>
+          <nav class="nav-links" aria-label="Primary navigation">
+            <a href="index.html">Landing</a>
+            <a href="docs.html">Docs</a>
+            <a href="architecture.html">Architecture</a>
+            <a href="README.html">Docs index</a>
+          </nav>
+        </div>
+      </header>
+      <main id="main">
+        <section class="page-hero">
+          <div class="container">
+            <div class="reveal">
+              <p class="eyebrow"><span class="eyebrow-dot"></span>Release engineering</p>
+              <h1>Publishing to PyPI</h1>
+              <p>PyPI release workflow, trusted publishing setup, and install verification for zh_catmut.</p>
+            </div>
+          </div>
+        </section>
+        <div class="container">
+          <article class="doc-article md-article">
+<h1>Publishing zh-catmut to PyPI</h1>
+<p>This repository is prepared for PyPI distribution through GitHub Actions and PyPI Trusted Publishing.</p>
+<h2>User install target</h2>
+<p>The public install command is:</p>
+<pre><code class="language-bash">python -m pip install zh-catmut
+</code></pre>
+<p>The Python import name is:</p>
+<pre><code class="language-python">import zh_catmut
+</code></pre>
+<p>Installed users can verify the wheel with:</p>
+<pre><code class="language-bash">zh-catmut doctor
+</code></pre>
+<h2>Local package checks</h2>
+<p>From the repository root:</p>
+<pre><code class="language-bash">python -m pip install --upgrade build twine
+python -m build
+python -m twine check dist/*
+python -m pip install --force-reinstall dist/*.whl
+zh-catmut doctor
+</code></pre>
+<p>If building from source, Zig must be on <code>PATH</code> or supplied through <code>ZIG=/path/to/zig</code>.</p>
+<h2>GitHub Actions</h2>
+<p>The repository has two package-oriented workflows:</p>
+<ul>
+<li><code>.github/workflows/ci.yml</code>: builds the package, checks distributions, installs the wheel, and runs <code>zh-catmut doctor</code>.</li>
+<li><code>.github/workflows/publish.yml</code>: builds wheels on Linux, macOS, and Windows; builds an sdist; checks artifacts; and publishes to TestPyPI or PyPI.</li>
+</ul>
+<h2>Trusted Publishing setup</h2>
+<p>Configure trusted publishers on PyPI/TestPyPI instead of storing API tokens in GitHub secrets.</p>
+<p>Use these values:</p>
+<ul>
+<li>Owner: <code>mohamedhossammohamed</code></li>
+<li>Repository: <code>zh_catmut</code></li>
+<li>Workflow: <code>publish.yml</code></li>
+<li>Environment for PyPI: <code>pypi</code></li>
+<li>Environment for TestPyPI: <code>testpypi</code></li>
+<li>Package name: <code>zh-catmut</code></li>
+</ul>
+<h2>Release flow</h2>
+<ol>
+<li>Confirm <code>pyproject.toml</code> has the intended version.</li>
+<li>Push to <code>main</code> and wait for package CI to pass.</li>
+<li>Run <strong>Publish Python Package</strong> manually with <code>target=testpypi</code>.</li>
+<li>Install from TestPyPI in a clean environment:</li>
+</ol>
+<p><code>bash
+   python -m pip install \
+     --index-url https://test.pypi.org/simple/ \
+     --extra-index-url https://pypi.org/simple/ \
+     zh-catmut
+   zh-catmut doctor</code></p>
+<ol>
+<li>If TestPyPI works, create a GitHub release or manually run the workflow with <code>target=pypi</code>.</li>
+<li>Verify the public install:</li>
+</ol>
+<p><code>bash
+   python -m pip install zh-catmut
+   zh-catmut doctor</code></p>
+          </article>
+        </div>
+      </main>
+      <footer class="site-footer">
+        <div class="footer-inner">
+          <div>zh_catmut: native LUT remapping for large Pandas categorical code buffers.</div>
+          <div class="footer-links">
+            <a href="docs.html">Docs</a>
+            <a href="architecture.html">Architecture</a>
+            <a href="index.html">Landing</a>
+            <a href="https://github.com/mohamedhossammohamed" target="_blank" rel="noopener">GitHub</a>
+            <a href="https://x.com/MohamedHz72007" target="_blank" rel="noopener">X</a>
+            <a href="https://www.apache.org/licenses/LICENSE-2.0" target="_blank" rel="noopener">Apache-2.0</a>
+          </div>
+        </div>
+      </footer>
+    </div>
+    <script src="assets/js/site.js"></script>
+  </body>
+</html>

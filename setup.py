@@ -109,6 +109,7 @@ def _build_native(build_temp: Path, destinations: Iterable[Path]) -> Path:
         _copy_library(prebuilt, destinations)
         return prebuilt
 
+    build_temp = build_temp.resolve()
     zig = os.environ.get("ZIG", "zig")
     optimize = os.environ.get("ZH_CATMUT_ZIG_OPTIMIZE", "fast").lower()
     prefix = build_temp / "zig-prefix"
@@ -158,7 +159,7 @@ class build_py(_build_py):
         super().run()
         build_temp = Path(self.get_finalized_command("build").build_temp) / "zh_catmut_native"
         destinations = [Path(self.build_lib) / "zh_catmut"]
-        if os.environ.get("ZH_CATMUT_COPY_TO_SOURCE", "1") != "0":
+        if os.environ.get("ZH_CATMUT_COPY_TO_SOURCE", "0") != "0":
             destinations.append(SOURCE_PACKAGE)
         _build_native(build_temp, destinations)
 

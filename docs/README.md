@@ -15,6 +15,7 @@ in-place mutation of massive categorical DataFrames.
 | 2 | [02-ffi-zero-copy-architecture.md](02-ffi-zero-copy-architecture.md) | FFI boundary design, C-ABI safety, buffer protocol, and zero-copy mutation mechanics |
 | 3 | [03-performance-algorithms.md](03-performance-algorithms.md) | SIMD optimization, CPU cache locality, multi-threading, and lookup table strategies |
 | 4 | [04-build-systems-and-distribution.md](04-build-systems-and-distribution.md) | Build systems, CI/CD pipelines, cross-platform wheel distribution, and Arrow PyCapsules |
+| 5 | [publishing.md](publishing.md) | PyPI release workflow, trusted publishing setup, and install verification |
 
 ## Architecture Overview
 
@@ -47,3 +48,4 @@ For engineers new to the codebase, the recommended reading order is:
 2. **02-ffi-zero-copy-architecture.md** — Understand *how* we cross the language boundary safely
 3. **03-performance-algorithms.md** — Understand *how* we maximize CPU throughput
 4. **04-build-systems-and-distribution.md** — Understand *how* we package and ship the native binaries
+5. **publishing.md** — Understand *how* to publish and verify the package

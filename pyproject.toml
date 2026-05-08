@@ -1,12 +1,12 @@
 [build-system]
-requires = ["setuptools>=68", "wheel"]
+requires = ["setuptools>=77", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "zh-catmut"
 version = "0.1.0"
 description = "Native LUT remapping for large Pandas categorical code buffers"
-readme = "docs/README.md"
+readme = "README.md"
 requires-python = ">=3.9"
 dependencies = [
     "numpy",
@@ -15,9 +15,16 @@ dependencies = [
 authors = [
     { name = "Mohamed Hossam" },
 ]
-license = { text = "Apache-2.0" }
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+keywords = ["pandas", "categorical", "numpy", "zig", "ffi", "native-extension", "dataframe"]
 classifiers = [
-    "License :: OSI Approved :: Apache Software License",
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Operating System :: MacOS",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX :: Linux",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
     "Programming Language :: Python :: 3.9",
@@ -25,6 +32,11 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Programming Language :: Zig",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Typing :: Typed",
 ]
 
 [project.urls]
@@ -33,6 +45,20 @@ Repository = "https://github.com/mohamedhossammohamed/zh_catmut"
 Documentation = "https://mohamedhossammohamed.github.io/zh_catmut/"
 Author = "https://github.com/mohamedhossammohamed"
 X = "https://x.com/MohamedHz72007"
+
+[project.optional-dependencies]
+dev = [
+    "build",
+    "twine",
+]
+release = [
+    "build",
+    "cibuildwheel",
+    "twine",
+]
+
+[project.scripts]
+zh-catmut = "zh_catmut._cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -44,3 +70,19 @@ zh_catmut = [
     "libzh_catmut.dylib",
     "zh_catmut.dll",
 ]
+
+[tool.cibuildwheel]
+build = "cp39-* cp310-* cp311-* cp312-* cp313-*"
+skip = "pp* *-musllinux_* *-win32 *-manylinux_i686"
+test-command = "python -m zh_catmut doctor"
+
+[tool.cibuildwheel.linux]
+archs = ["x86_64"]
+before-build = "python scripts/install_zig.py --install-dir /tmp/zig-bin"
+environment = { ZIG = "/tmp/zig-bin/zig" }
+
+[tool.cibuildwheel.macos]
+archs = ["x86_64", "arm64"]
+
+[tool.cibuildwheel.windows]
+archs = ["AMD64"]
