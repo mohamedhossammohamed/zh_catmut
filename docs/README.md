@@ -1,5 +1,7 @@
 # Project Documentation
 
+License: [Apache-2.0](../LICENSE) · GitHub: [mohamedhossammohamed](https://github.com/mohamedhossammohamed) · X: [@MohamedHz72007](https://x.com/MohamedHz72007)
+
 This directory contains the organized technical documentation for the high-performance
 Pandas categorical mutation native extension project. The architecture bridges Python
 with modern systems languages (Zig and C# NativeAOT) to enable zero-copy, SIMD-accelerated

@@ -3,6 +3,7 @@
 ![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue)
 ![Native Core](https://img.shields.io/badge/native-Zig-orange)
 ![DataFrame](https://img.shields.io/badge/pandas-categorical-green)
+![License](https://img.shields.io/badge/license-Apache--2.0-blue)
 
 **Remap huge Pandas categorical columns without expanding them into object arrays or allocating boolean masks.**
 
@@ -59,3 +60,9 @@ from zh_catmut import remap_categorical, remap_codes_inplace
 ```
 
 Use `remap_categorical` for Pandas objects and `remap_codes_inplace` only when you already own a writable, contiguous NumPy codes buffer and a dense `int64` LUT.
+
+## Links
+
+- GitHub profile: [mohamedhossammohamed](https://github.com/mohamedhossammohamed)
+- X profile: [@MohamedHz72007](https://x.com/MohamedHz72007)
+- License: [Apache-2.0](LICENSE)

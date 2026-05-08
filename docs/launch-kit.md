@@ -90,4 +90,10 @@ Install:
 pip install zh-catmut
 ```
 
-GitHub: `<your GitHub repository URL>`
+GitHub: https://github.com/mohamedhossammohamed/zh_catmut
+
+Creator: https://github.com/mohamedhossammohamed
+
+X: https://x.com/MohamedHz72007
+
+License: Apache-2.0

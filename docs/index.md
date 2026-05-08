@@ -2,6 +2,8 @@
 
 `zh_catmut` is a native Python package for remapping large Pandas categorical code buffers through a narrow C ABI. It keeps category-label reconciliation in Python, where the metadata is small, and moves the full-column integer remap into a bundled Zig shared library.
 
+License: [Apache-2.0](../LICENSE) · GitHub: [mohamedhossammohamed](https://github.com/mohamedhossammohamed) · X: [@MohamedHz72007](https://x.com/MohamedHz72007)
+
 ## Problem
 
 Pandas categoricals are dictionary encoded:

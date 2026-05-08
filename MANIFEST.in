@@ -1,3 +1,4 @@
+include LICENSE
 include include/zh_catmut_abi.h
 include native/build.zig
 include native/src/root.zig
