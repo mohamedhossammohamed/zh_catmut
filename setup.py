@@ -9,6 +9,7 @@ from typing import Iterable, Optional
 
 from setuptools import setup
 from setuptools.command.build_py import build_py as _build_py
+from setuptools.command.sdist import sdist as _sdist
 
 try:
     from setuptools.command.develop import develop as _develop
@@ -29,6 +30,7 @@ ROOT = Path(__file__).resolve().parent
 NATIVE_DIR = ROOT / "native"
 SOURCE_PACKAGE = ROOT / "src" / "zh_catmut"
 COMPILED_DIR = ROOT / "compiled"
+NATIVE_LIBRARY_NAMES = {"libzh_catmut.so", "libzh_catmut.dylib", "zh_catmut.dll"}
 
 
 def _library_name() -> str:
@@ -164,7 +166,23 @@ class build_py(_build_py):
         _build_native(build_temp, destinations)
 
 
-cmdclass = {"build_py": build_py}
+class sdist(_sdist):
+    def _without_native_libraries(self, files: Iterable[str]) -> list[str]:
+        excluded = {
+            str((SOURCE_PACKAGE / name).relative_to(ROOT)).replace(os.sep, "/")
+            for name in NATIVE_LIBRARY_NAMES
+        }
+        return [file for file in files if file.replace(os.sep, "/") not in excluded]
+
+    def get_file_list(self) -> None:
+        super().get_file_list()
+        self.filelist.files = self._without_native_libraries(self.filelist.files)
+
+    def make_release_tree(self, base_dir: str, files: list[str]) -> None:
+        super().make_release_tree(base_dir, self._without_native_libraries(files))
+
+
+cmdclass = {"build_py": build_py, "sdist": sdist}
 
 if _develop is not None:
 

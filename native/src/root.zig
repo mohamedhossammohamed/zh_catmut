@@ -552,3 +552,79 @@ fn remapCopyTyped(
     }
     return stats;
 }
+
+test "zhcm_remap_lut_inplace remaps int8 codes and reports counts" {
+    var codes = [_]i8{ 0, 1, 2, -1, 1 };
+    const lut = [_]i64{ 2, 0, 1 };
+    var report: ExecReport = undefined;
+
+    const status = zhcm_remap_lut_inplace(
+        codes[0..].ptr,
+        codes.len,
+        DTYPE_I8,
+        lut[0..].ptr,
+        lut.len,
+        3,
+        -1,
+        1,
+        FLAG_ALLOW_MISSING | FLAG_VALIDATE_INPUT | FLAG_COLLECT_COUNTS,
+        &report,
+    );
+
+    try std.testing.expectEqual(@as(i32, OK), status);
+    try std.testing.expectEqualSlices(i8, &[_]i8{ 2, 0, 1, -1, 0 }, codes[0..]);
+    try std.testing.expectEqual(@as(u64, codes.len), report.item_count);
+    try std.testing.expectEqual(@as(u64, 4), report.changed_count);
+    try std.testing.expectEqual(@as(u64, 1), report.missing_count);
+}
+
+test "zhcm_remap_lut_copy leaves source untouched" {
+    const src = [_]i32{ 1, 0, -1, 1 };
+    var dst = [_]i32{ 9, 9, 9, 9 };
+    const lut = [_]i64{ 1, 0 };
+    var report: ExecReport = undefined;
+
+    const status = zhcm_remap_lut_copy(
+        src[0..].ptr,
+        dst[0..].ptr,
+        src.len,
+        DTYPE_I32,
+        lut[0..].ptr,
+        lut.len,
+        2,
+        -1,
+        1,
+        FLAG_ALLOW_MISSING | FLAG_VALIDATE_INPUT | FLAG_COLLECT_COUNTS,
+        &report,
+    );
+
+    try std.testing.expectEqual(@as(i32, OK), status);
+    try std.testing.expectEqualSlices(i32, &[_]i32{ 1, 0, -1, 1 }, src[0..]);
+    try std.testing.expectEqualSlices(i32, &[_]i32{ 0, 1, -1, 0 }, dst[0..]);
+    try std.testing.expectEqual(@as(u64, 3), report.changed_count);
+    try std.testing.expectEqual(@as(u64, 1), report.missing_count);
+}
+
+test "zhcm_predict_remap_lut reports invalid input before mutation" {
+    const codes = [_]i16{ 0, 3, 1 };
+    const lut = [_]i64{ 0, 1 };
+    var report: GateReport = undefined;
+
+    const status = zhcm_predict_remap_lut(
+        codes[0..].ptr,
+        codes.len,
+        DTYPE_I16,
+        lut[0..].ptr,
+        lut.len,
+        2,
+        -1,
+        FLAG_ALLOW_MISSING | FLAG_COLLECT_COUNTS,
+        &report,
+    );
+
+    try std.testing.expectEqual(@as(i32, ERR_CODE_OUT_OF_RANGE), status);
+    try std.testing.expectEqual(@as(i32, ERR_CODE_OUT_OF_RANGE), report.status);
+    try std.testing.expectEqual(@as(u64, 1), report.invalid_input_count);
+    try std.testing.expectEqual(@as(u64, 1), report.first_invalid_index);
+    try std.testing.expectEqual(@as(i64, 3), report.first_invalid_code);
+}

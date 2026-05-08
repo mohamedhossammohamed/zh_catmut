@@ -4,3 +4,4 @@ include include/zh_catmut_abi.h
 include native/build.zig
 include native/src/root.zig
 recursive-include src/zh_catmut *.py py.typed
+recursive-include tests *.py

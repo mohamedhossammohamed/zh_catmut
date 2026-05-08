@@ -28,8 +28,16 @@ series = remap_categorical(
 
 ## Installation
 
+For released wheels:
+
 ```bash
 pip install zh-catmut
+```
+
+For a source checkout:
+
+```bash
+python -m pip install .
 ```
 
 Verify the installed wheel and bundled native library:
@@ -130,6 +138,18 @@ python -m zh_catmut doctor
 - `example` prints a minimal `copy_fallback=True` Pandas example.
 - `doctor` verifies NumPy/Pandas imports, native library loading, ABI version, and low/high-level remap smoke tests.
 - If your Python user scripts directory is not on `PATH`, use `python -m zh_catmut ...` instead of `zh-catmut ...`.
+
+## Testing and native transparency
+
+The native implementation is tracked in `native/src/root.zig`, with the C ABI declared in `include/zh_catmut_abi.h`. Tests are included so the compiled shared library is not a black-box artifact:
+
+```bash
+python -m pip install -e ".[test]"
+python -m pytest -q
+cd native && zig build test
+```
+
+The Python tests load the packaged native library, verify the ABI, exercise every supported integer code dtype, check all-or-nothing validation, run the Pandas copy-fallback path, and execute `python -m zh_catmut doctor`.
 
 ## Troubleshooting
 

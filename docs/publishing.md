@@ -7,6 +7,9 @@ This repository is prepared for PyPI distribution through GitHub Actions and PyP
 The public install command is:
 
 ```bash
+python -m pip install -e ".[test]"
+python -m pytest -q
+(cd native && zig build test)
 python -m pip install zh-catmut
 ```
 
@@ -40,7 +43,7 @@ If building from source, Zig must be on `PATH` or supplied through `ZIG=/path/to
 
 The repository has two package-oriented workflows:
 
-- `.github/workflows/ci.yml`: builds the package, checks distributions, installs the wheel, and runs `zh-catmut doctor`.
+- `.github/workflows/ci.yml`: runs native Zig tests, Python integration tests, package build checks, wheel install verification, and `zh-catmut doctor`.
 - `.github/workflows/publish.yml`: builds wheels on Linux, macOS, and Windows; builds an sdist; checks artifacts; and publishes to TestPyPI or PyPI.
 
 ## Trusted Publishing setup
@@ -78,3 +81,34 @@ Use these values:
    python -m pip install zh-catmut
    zh-catmut doctor
    ```
+
+## Indexing and discoverability checklist
+
+If `pip install zh-catmut` or PyPI search cannot find the project, first confirm whether it exists on the package index:
+
+```bash
+python - <<'PY'
+import urllib.error
+import urllib.request
+
+for url in (
+    "https://pypi.org/pypi/zh-catmut/json",
+    "https://test.pypi.org/pypi/zh-catmut/json",
+):
+    try:
+        with urllib.request.urlopen(url, timeout=15) as response:
+            print(url, response.status)
+    except urllib.error.HTTPError as exc:
+        print(url, exc.code)
+PY
+```
+
+`404` means the package has not been published to that index yet. Search engines and mirrors cannot index it until the publish workflow succeeds.
+
+For GitHub and GitHub Pages discoverability:
+
+1. Set the GitHub repository description and homepage URL in the repository settings.
+2. Add relevant repository topics such as `pandas`, `categorical`, `numpy`, `zig`, `native-extension`, and `python`.
+3. Confirm GitHub Pages serves `robots.txt` and `sitemap.xml`.
+4. Submit `https://mohamedhossammohamed.github.io/zh_catmut/sitemap.xml` to search engines if immediate crawling is important.
+5. Allow time for crawlers to index a new repository and Pages site.

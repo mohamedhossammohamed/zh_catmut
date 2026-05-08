@@ -91,7 +91,10 @@
 </code></pre>
 <h2>Local package checks</h2>
 <p>From the repository root:</p>
-<pre><code class="language-bash">python -m pip install --upgrade build twine
+<pre><code class="language-bash">python -m pip install -e ".[test]"
+python -m pytest -q
+(cd native && zig build test)
+python -m pip install --upgrade build twine
 python -m build
 python -m twine check dist/*
 python -m pip install --force-reinstall dist/*.whl
@@ -101,7 +104,7 @@ zh-catmut doctor
 <h2>GitHub Actions</h2>
 <p>The repository has two package-oriented workflows:</p>
 <ul>
-<li><code>.github/workflows/ci.yml</code>: builds the package, checks distributions, installs the wheel, and runs <code>zh-catmut doctor</code>.</li>
+<li><code>.github/workflows/ci.yml</code>: runs native Zig tests, Python integration tests, package build checks, wheel install verification, and <code>zh-catmut doctor</code>.</li>
 <li><code>.github/workflows/publish.yml</code>: builds wheels on Linux, macOS, and Windows; builds an sdist; checks artifacts; and publishes to TestPyPI or PyPI.</li>
 </ul>
 <h2>Trusted Publishing setup</h2>
@@ -135,6 +138,32 @@ zh-catmut doctor
 <p><code>bash
    python -m pip install zh-catmut
    zh-catmut doctor</code></p>
+<h2>Indexing and discoverability checklist</h2>
+<p>If <code>pip install zh-catmut</code> or PyPI search cannot find the project, first confirm whether it exists on the package index:</p>
+<pre><code class="language-bash">python - &lt;&lt;'PY'
+import urllib.error
+import urllib.request
+
+for url in (
+    "https://pypi.org/pypi/zh-catmut/json",
+    "https://test.pypi.org/pypi/zh-catmut/json",
+):
+    try:
+        with urllib.request.urlopen(url, timeout=15) as response:
+            print(url, response.status)
+    except urllib.error.HTTPError as exc:
+        print(url, exc.code)
+PY
+</code></pre>
+<p><code>404</code> means the package has not been published to that index yet. Search engines and mirrors cannot index it until the publish workflow succeeds.</p>
+<p>For GitHub and GitHub Pages discoverability:</p>
+<ol>
+<li>Set the GitHub repository description and homepage URL in the repository settings.</li>
+<li>Add relevant repository topics such as <code>pandas</code>, <code>categorical</code>, <code>numpy</code>, <code>zig</code>, <code>native-extension</code>, and <code>python</code>.</li>
+<li>Confirm GitHub Pages serves <code>robots.txt</code> and <code>sitemap.xml</code>.</li>
+<li>Submit <code>https://mohamedhossammohamed.github.io/zh_catmut/sitemap.xml</code> to search engines if immediate crawling is important.</li>
+<li>Allow time for crawlers to index a new repository and Pages site.</li>
+</ol>
           </article>
         </div>
       </main>

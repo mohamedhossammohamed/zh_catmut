@@ -92,9 +92,9 @@
             <h1 id="project-documentation">Project Documentation</h1>
 <p>License: <a href="https://www.apache.org/licenses/LICENSE-2.0" target="_blank" rel="noopener">Apache-2.0</a> · GitHub: <a href="https://github.com/mohamedhossammohamed" target="_blank" rel="noopener">mohamedhossammohamed</a> · X: <a href="https://x.com/MohamedHz72007" target="_blank" rel="noopener">@MohamedHz72007</a></p>
 <p>This directory contains the organized technical documentation for the high-performance
-Pandas categorical mutation native extension project. The architecture bridges Python
-with modern systems languages (Zig and C# NativeAOT) to enable zero-copy, SIMD-accelerated
-in-place mutation of massive categorical DataFrames.</p>
+Pandas categorical mutation native extension project. The current implementation bridges
+Python with a Zig shared library through a strict C ABI to remap contiguous categorical
+code buffers without expanding labels into object arrays.</p>
 <h2 id="documentation-index">Documentation Index</h2>
 <table>
 <thead>
@@ -118,12 +118,12 @@ in-place mutation of massive categorical DataFrames.</p>
 <tr>
 <td>3</td>
 <td><a href="03-performance-algorithms.html">03-performance-algorithms.md</a></td>
-<td>SIMD optimization, CPU cache locality, multi-threading, and lookup table strategies</td>
+<td>Performance strategies, CPU cache locality, SIMD options, and lookup table tradeoffs</td>
 </tr>
 <tr>
 <td>4</td>
 <td><a href="04-build-systems-and-distribution.html">04-build-systems-and-distribution.md</a></td>
-<td>Build systems, CI/CD pipelines, cross-platform wheel distribution, and Arrow PyCapsules</td>
+<td>Build systems, CI/CD pipelines, cross-platform wheel distribution, and dynamic loading</td>
 </tr>
 <tr>
 <td>5</td>
@@ -139,17 +139,17 @@ Python/NumPy execution path triggers catastrophic memory inflation (object-mode 
 that can increase memory usage from ~100 MB to 5-10 GB.</p>
 <h3 id="core-architectural-layers">Core Architectural Layers</h3>
 <ol>
-<li><strong>Data Layer</strong> — Pandas Categorical internals, BlockManager, and Arrow C Data Interface</li>
-<li><strong>Boundary Layer</strong> — Foreign Function Interface (FFI) via C-ABI with zero-copy pointer handoff</li>
-<li><strong>Compute Layer</strong> — Native algorithms in Zig / C# NativeAOT utilizing SIMD (AVX-512/NEON) and multi-threading</li>
-<li><strong>Packaging Layer</strong> — PEP 517 build backends, cibuildwheel CI matrices, and manylinux-compatible wheels</li>
-<li><strong>Runtime Layer</strong> — Dynamic library loading, PyCapsule memory safety, and CoW-compliant reintegration</li>
+<li><strong>Data Layer</strong> — Pandas Categorical internals and NumPy-backed integer codes</li>
+<li><strong>Boundary Layer</strong> — Foreign Function Interface (FFI) via C-ABI with borrowed pointer handoff</li>
+<li><strong>Compute Layer</strong> — Native scalar LUT remapping in Zig with explicit validation reports</li>
+<li><strong>Packaging Layer</strong> — PEP 517 build hooks, cibuildwheel CI matrices, and platform wheels</li>
+<li><strong>Runtime Layer</strong> — Dynamic library loading, Python-owned buffer safety, and CoW-compliant reintegration</li>
 </ol>
 <h3 id="key-design-principles">Key Design Principles</h3>
 <ul>
-<li><strong>Zero-Copy Mutation:</strong> Pass raw memory pointers across the FFI boundary without serialization or duplication</li>
+<li><strong>Zero-Copy In-Place Path:</strong> Pass raw memory pointers across the FFI boundary without serialization</li>
 <li><strong>GIL Bypass:</strong> Release the Python Global Interpreter Lock during native execution to maximize throughput</li>
-<li><strong>Memory Safety:</strong> Use Apache Arrow PyCapsules with bound destructors to prevent unmanaged memory leaks</li>
+<li><strong>Memory Safety:</strong> Keep Python as the owner of all buffers and expire native borrowed pointers on return</li>
 <li><strong>CoW Compliance:</strong> Respect Pandas 3.0 Copy-on-Write semantics via <code>pd.Categorical.from_codes()</code> reintegration</li>
 <li><strong>Frictionless Distribution:</strong> Pre-compile wheels for Linux, macOS, and Windows via GitHub Actions + cibuildwheel</li>
 </ul>

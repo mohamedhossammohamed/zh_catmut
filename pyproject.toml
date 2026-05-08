@@ -43,17 +43,23 @@ classifiers = [
 Homepage = "https://github.com/mohamedhossammohamed/zh_catmut"
 Repository = "https://github.com/mohamedhossammohamed/zh_catmut"
 Documentation = "https://mohamedhossammohamed.github.io/zh_catmut/"
+Issues = "https://github.com/mohamedhossammohamed/zh_catmut/issues"
 Author = "https://github.com/mohamedhossammohamed"
 X = "https://x.com/MohamedHz72007"
 
 [project.optional-dependencies]
 dev = [
     "build",
+    "pytest",
     "twine",
+]
+test = [
+    "pytest",
 ]
 release = [
     "build",
     "cibuildwheel",
+    "pytest",
     "twine",
 ]
 
@@ -74,7 +80,12 @@ zh_catmut = [
 [tool.cibuildwheel]
 build = "cp39-* cp310-* cp311-* cp312-* cp313-*"
 skip = "pp* *-musllinux_* *-win32 *-manylinux_i686"
-test-command = "python -m zh_catmut doctor"
+test-requires = ["pytest"]
+test-command = "python -m zh_catmut doctor && python -m pytest -q {project}/tests"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
 
 [tool.cibuildwheel.linux]
 archs = ["x86_64"]
