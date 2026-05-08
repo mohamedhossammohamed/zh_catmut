@@ -47,8 +47,3 @@ For engineers new to the codebase, the recommended reading order is:
 2. **02-ffi-zero-copy-architecture.md** — Understand *how* we cross the language boundary safely
 3. **03-performance-algorithms.md** — Understand *how* we maximize CPU throughput
 4. **04-build-systems-and-distribution.md** — Understand *how* we package and ship the native binaries
-
-## Raw Source Files
-
-All original drafts and alternative versions are preserved in the [`raw/`](raw/) directory
-for reference. This includes early build-system drafts and the unformatted source export.

@@ -70,30 +70,170 @@ I would welcome feedback on the C ABI shape and Zig implementation strategy.
 
 No `r/dotnet` launch copy is included because V1 is implemented in Zig, not C# NativeAOT. Publishing a .NET-focused post would misrepresent the code.
 
-## X Thread
+## X Short Launch Post
 
-### Tweet 1
+Published `zh_catmut`: a Python + Zig package for remapping huge Pandas categorical columns by touching the dense integer codes buffer directly, without expanding labels into object arrays.
 
-Pandas categoricals are memory-efficient until relabeling or category alignment forces large temporary arrays or object-mode fallbacks.
-
-`zh_catmut` remaps the dense integer code buffer directly through a native C ABI.
-
-### Tweet 2
-
-Python builds the category LUT and validates Pandas/NumPy safety; a bundled Zig shared library receives only raw pointers, lengths, flags, and POD reports, then remaps the contiguous codes in one batch.
-
-### Tweet 3
-
-Install:
-
-```bash
-pip install zh-catmut
-```
+Apache-2.0.
 
 GitHub: https://github.com/mohamedhossammohamed/zh_catmut
 
-Creator: https://github.com/mohamedhossammohamed
+## X Deep Architecture Thread
 
-X: https://x.com/MohamedHz72007
+### Tweet 1
 
-License: Apache-2.0
+Deep dive on `zh_catmut`: a native remapping engine for Pandas categoricals.
+
+The design goal is simple: keep label semantics in Python, move only the repetitive full-column integer loop to native code.
+
+Repo: https://github.com/mohamedhossammohamed/zh_catmut
+
+### Tweet 2
+
+Decision map:
+
+1. Treat Pandas categories as metadata.
+2. Treat categorical `codes` as the real large payload.
+3. Build a dense LUT in Python.
+4. Send only primitive memory to native code.
+5. Validate everything before mutation.
+
+### Tweet 3
+
+Why this exists:
+
+Pandas categoricals are compact because the column stores integer codes, not repeated Python strings.
+
+The pain starts when relabeling, merging, or aligning categories forces full-column work, replacement buffers, masks, or object-mode intermediates.
+
+### Tweet 4
+
+Core execution model:
+
+```text
+old_code -> lut[old_code] -> new_code
+```
+
+The category labels stay in Python. The native side only sees a contiguous signed integer code buffer and an `int64` lookup table.
+
+### Tweet 5
+
+Architecture split:
+
+Python:
+
+- reads old labels
+- applies the mapping
+- deduplicates target categories
+- builds the LUT
+- checks Pandas/NumPy safety
+
+Zig:
+
+- validates code and target ranges
+- remaps the contiguous integer buffer
+- returns a POD execution report
+
+### Tweet 6
+
+The C ABI is intentionally narrow.
+
+Native functions receive only:
+
+- raw pointers
+- lengths
+- dtype IDs
+- flags
+- caller-owned report structs
+
+No Python objects, Pandas objects, strings, dicts, JSON, or object arrays cross the boundary.
+
+### Tweet 7
+
+Safety decision:
+
+Mutation is all-or-nothing.
+
+Before writing, native code runs a prediction pass that rejects invalid source codes, invalid mapped targets, missing-policy violations, null pointers, and oversized lengths.
+
+If validation fails, the in-place path writes nothing.
+
+### Tweet 8
+
+CoW decision:
+
+High-level in-place mutation is strict because Pandas storage may be shared.
+
+When ownership is unclear:
+
+```python
+remap_categorical(series, mapping, copy_fallback=True)
+```
+
+This uses a Python-owned destination codes buffer.
+
+### Tweet 9
+
+Why Zig for V1:
+
+The native primitive is small and explicit: a C ABI, integer dtype dispatch, validation, and a contiguous LUT loop.
+
+Zig keeps the shared library compact, exports stable C symbols, and makes the memory contract easy to audit.
+
+### Tweet 10
+
+How it executes:
+
+1. User calls `remap_categorical`.
+2. Python builds target categories.
+3. Python builds dense `np.int64` LUT.
+4. Python gates dtype/shape/contiguity/bounds.
+5. `ctypes.CDLL` calls Zig.
+6. Zig validates.
+7. Zig remaps.
+8. Python reattaches a categorical.
+
+### Tweet 11
+
+The public API is intentionally small:
+
+```python
+from zh_catmut import remap_categorical, remap_codes_inplace
+```
+
+Use `remap_categorical` for Pandas objects.
+
+Use `remap_codes_inplace` only when you own a writable, contiguous NumPy codes buffer and a dense LUT.
+
+### Tweet 12
+
+V1 baseline:
+
+The first native kernel is a scalar contiguous LUT remap for `int8`, `int16`, `int32`, and `int64` code buffers.
+
+The ABI leaves room for future SIMD and threaded kernels without changing the Python-facing model.
+
+### Tweet 13
+
+What I tried to avoid:
+
+- native ownership of Python buffers
+- passing objects across FFI
+- hidden allocation in native code
+- partial mutation after validation failure
+- relying on Pandas internals without safety gates
+
+The narrow boundary is the product.
+
+### Tweet 14
+
+`zh_catmut` is Apache-2.0.
+
+I would love feedback on:
+
+- the C ABI shape
+- the Pandas CoW gate
+- whether scalar LUT remap is the right V1 baseline
+- where SIMD/threading should enter later
+
+Repo: https://github.com/mohamedhossammohamed/zh_catmut

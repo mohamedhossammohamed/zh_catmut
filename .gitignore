@@ -22,3 +22,19 @@ src/zh_catmut/*.so
 src/zh_catmut/*.dylib
 src/zh_catmut/*.dll
 .devin/config.local.json
+
+# Internal planning, prompt, draft, and coding-agent Markdown kept local only.
+NATIVE_EXTENSION_API_CONTRACT.md
+NATIVE_EXTENSION_IMPLEMENTATION_PLAN.md
+QA_TESTING_INSTRUCTIONS_FOR_CODING_AGENT.md
+docs/raw/
+*PLAN*.md
+*plan*.md
+*PROMPT*.md
+*prompt*.md
+*CODING_AGENT*.md
+*coding_agent*.md
+*VIBE*.md
+*vibe*.md
+*DRAFT*.md
+*draft*.md
