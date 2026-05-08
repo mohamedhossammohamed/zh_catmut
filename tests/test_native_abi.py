@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from zh_catmut import NativeStatusError, remap_categorical, remap_codes_inplace
+from zh_catmut import MemoryGateError, NativeStatusError, remap_categorical, remap_codes_inplace
 from zh_catmut._abi import ZHCM_ABI_VERSION, ZHCM_ERR_CODE_OUT_OF_RANGE, ZHCM_OK
 from zh_catmut._loader import load_native
 
@@ -43,6 +43,14 @@ def test_native_validation_is_all_or_nothing() -> None:
     assert exc_info.value.status == ZHCM_ERR_CODE_OUT_OF_RANGE
     assert exc_info.value.report.first_invalid_index == 1
     assert exc_info.value.report.first_invalid_code == 2
+
+
+def test_threads_greater_than_one_are_reserved() -> None:
+    codes = np.array([0, 1], dtype=np.int8)
+    lut = np.array([1, 0], dtype=np.int64)
+
+    with pytest.raises(MemoryGateError, match="reserved"):
+        remap_codes_inplace(codes, lut, target_category_count=2, threads=2)
 
 
 def test_remap_categorical_copy_fallback_preserves_source() -> None:

@@ -282,7 +282,7 @@ print(out.tolist())</code></pre>
                   </tr>
                   <tr>
                     <td><code>threads</code></td>
-                    <td>Forwarded to the native call. The current scalar implementation accepts the parameter.</td>
+                    <td>Reserved for future native parallelism. The current scalar implementation accepts <code>0</code> or <code>1</code>.</td>
                   </tr>
                 </tbody>
               </table>
@@ -609,7 +609,7 @@ zhcm_remap_lut_copy</code></pre>
                 </details>
                 <details>
                   <summary>Should I pass threads?</summary>
-                  <p>The API accepts a thread request for ABI stability and future native kernels. The current implementation uses the scalar native remap path.</p>
+                  <p>Use <code>threads=0</code> or <code>threads=1</code>. Values greater than 1 are rejected until native parallel kernels exist.</p>
                 </details>
               </div>
             </section>

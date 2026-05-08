@@ -168,8 +168,8 @@ ZHCM_API int32_t zhcm_predict_remap_lut(
  * before writing the first element. If validation fails, no writes may occur.
  *
  * Arguments are identical to zhcm_predict_remap_lut, plus:
- * - thread_count: 0 means native auto-selection; 1 means scalar single-thread;
- *   values >1 request explicit parallel execution when ZHCM_FLAG_PARALLEL is set.
+ * - thread_count: reserved for future native parallelism. The V1 kernel is
+ *   scalar; callers should pass 0 or 1.
  * - out_report: optional pointer to a caller-allocated execution report.
  *
  * Ownership:

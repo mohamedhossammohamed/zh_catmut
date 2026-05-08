@@ -62,6 +62,28 @@ def _platform_tag() -> Optional[str]:
     return f"{platform.system().lower()}-{arch}"
 
 
+def _macos_wheel_platform_name() -> Optional[str]:
+    if platform.system() != "Darwin":
+        return None
+
+    cibw_arch = os.environ.get("CIBW_ARCHS") or os.environ.get("CIBW_ARCHS_MACOS")
+    if cibw_arch and " " not in cibw_arch.strip():
+        arch = cibw_arch.strip()
+    else:
+        arch = platform.machine().lower()
+
+    normalized = _normalized_arch(arch)
+    if normalized == "aarch64":
+        return "macosx-11.0-arm64"
+    if normalized == "x86_64":
+        target = os.environ.get("MACOSX_DEPLOYMENT_TARGET", "10.9")
+        parts = target.split(".")
+        major = int(parts[0]) if parts and parts[0].isdigit() else 10
+        minor = int(parts[1]) if len(parts) > 1 and parts[1].isdigit() else 9
+        return f"macosx-{major}.{minor}-x86_64"
+    return None
+
+
 def _prebuilt_library() -> Optional[Path]:
     explicit = os.environ.get("ZH_CATMUT_PREBUILT_LIBRARY")
     if explicit:
@@ -208,6 +230,10 @@ if _bdist_wheel is not None:
         def finalize_options(self) -> None:
             super().finalize_options()
             self.root_is_pure = False
+            macos_platform = _macos_wheel_platform_name()
+            if macos_platform is not None:
+                self.plat_name = macos_platform
+                self.plat_name_supplied = True
 
     cmdclass["bdist_wheel"] = bdist_wheel
 

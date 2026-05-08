@@ -57,7 +57,7 @@ Parameters:
 - `target_category_count`: number of categories in the target dictionary. Every non-missing mapped code must be in `[0, target_category_count)`.
 - `missing_code`: missing sentinel. Defaults to `-1`, matching Pandas categorical codes.
 - `allow_missing`: when `True`, missing input codes and LUT outputs equal to `missing_code` are accepted. When `False`, either case is rejected before mutation.
-- `threads`: native thread request. The current implementation accepts the parameter and executes the scalar native remap path.
+- `threads`: reserved for future native parallelism. The current implementation accepts `0` or `1` and executes the scalar native remap path.
 
 Return value:
 
@@ -93,7 +93,7 @@ Parameters:
 - `mapping`: label mapping. Categories not present in the mapping are preserved. Multiple old labels may map to the same new label.
 - `assume_unique`: bypasses the high-level Copy-on-Write uniqueness check and allows controlled in-place mutation after all other gates pass.
 - `copy_fallback`: when `True`, allocate a Python-owned destination codes buffer and use the native copy remap path. The original codes buffer is preserved.
-- `threads`: forwarded to the low-level native call.
+- `threads`: reserved for future native parallelism. The current implementation accepts `0` or `1` and executes the scalar native remap path.
 
 Return value:
 

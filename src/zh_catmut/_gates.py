@@ -44,6 +44,8 @@ def validate_threads(value: object) -> int:
     threads = _index(value, "threads")
     if threads < 0 or threads > _UINT32_MAX:
         raise MemoryGateError("threads must fit in uint32")
+    if threads not in (0, 1):
+        raise MemoryGateError("threads is reserved for future native parallelism; use 0 or 1")
     return threads
 
 

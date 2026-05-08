@@ -100,7 +100,7 @@ remap_categorical(
 - `mapping`: mapping from old labels to new labels. Labels not present in the mapping are preserved.
 - `copy_fallback`: when `True`, allocate a destination codes buffer and avoid in-place ownership risk.
 - `assume_unique`: expert-only escape hatch for controlled in-place mutation after all other gates pass.
-- `threads`: accepted by the native ABI. The current V1 kernel uses the scalar remap path.
+- `threads`: reserved for future native parallelism. The current V1 kernel accepts `0` or `1` and uses the scalar remap path.
 
 ### `remap_codes_inplace`
 

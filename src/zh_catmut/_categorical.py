@@ -10,7 +10,6 @@ import pandas as pd
 from ._abi import (
     ZHCM_FLAG_ALLOW_MISSING,
     ZHCM_FLAG_COLLECT_COUNTS,
-    ZHCM_FLAG_PARALLEL,
     ZHCM_FLAG_VALIDATE_INPUT,
     ZHCM_OK,
     ZhcmExecReport,
@@ -51,8 +50,6 @@ def _execution_flags(allow_missing: bool, threads: int) -> int:
     flags = ZHCM_FLAG_VALIDATE_INPUT | ZHCM_FLAG_COLLECT_COUNTS
     if allow_missing:
         flags |= ZHCM_FLAG_ALLOW_MISSING
-    if threads != 1:
-        flags |= ZHCM_FLAG_PARALLEL
     return flags
 
 
