@@ -13,7 +13,6 @@ from ._types import dtype_to_zhcm
 
 _INT64_MIN = -(1 << 63)
 _INT64_MAX = (1 << 63) - 1
-_UINT32_MAX = (1 << 32) - 1
 _SIZE_T_MAX = ctypes.c_size_t(-1).value
 
 
@@ -40,22 +39,17 @@ def validate_int64(value: object, name: str) -> int:
     return resolved
 
 
-def validate_threads(value: object) -> int:
-    threads = _index(value, "threads")
-    if threads < 0 or threads > _UINT32_MAX:
-        raise MemoryGateError("threads must fit in uint32")
-    if threads not in (0, 1):
-        raise MemoryGateError("threads is reserved for future native parallelism; use 0 or 1")
-    return threads
-
-
-def validate_codes_array(codes: object) -> int:
+def validate_codes_array(codes: object, *, require_writeable: bool = False) -> int:
     if not isinstance(codes, np.ndarray):
         raise MemoryGateError("codes must be a NumPy ndarray")
     if codes.ndim != 1:
         raise MemoryGateError("codes must be one-dimensional")
     if not codes.flags.c_contiguous:
         raise MemoryGateError("codes must be C-contiguous")
+    if not codes.flags.aligned:
+        raise MemoryGateError("codes must be aligned")
+    if require_writeable and not codes.flags.writeable:
+        raise MemoryGateError("codes must be writeable")
     dtype_code = dtype_to_zhcm(codes.dtype)
     validate_size(codes.size, "codes.size")
     return dtype_code
@@ -70,6 +64,8 @@ def validate_lut_array(lut: object) -> None:
         raise MemoryGateError("lut must have dtype int64")
     if not lut.flags.c_contiguous:
         raise MemoryGateError("lut must be C-contiguous")
+    if not lut.flags.aligned:
+        raise MemoryGateError("lut must be aligned")
     validate_size(lut.size, "lut.size")
 
 
@@ -93,5 +89,4 @@ __all__ = [
     "validate_int64",
     "validate_lut_array",
     "validate_size",
-    "validate_threads",
 ]

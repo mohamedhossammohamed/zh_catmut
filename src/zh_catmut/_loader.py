@@ -51,7 +51,6 @@ def _declare_signatures(lib: ctypes.CDLL) -> None:
         ctypes.c_size_t,
         ctypes.c_size_t,
         ctypes.c_int64,
-        ctypes.c_uint32,
         ctypes.c_uint64,
         ctypes.POINTER(ZhcmExecReport),
     ]
@@ -66,7 +65,6 @@ def _declare_signatures(lib: ctypes.CDLL) -> None:
         ctypes.c_size_t,
         ctypes.c_size_t,
         ctypes.c_int64,
-        ctypes.c_uint32,
         ctypes.c_uint64,
         ctypes.POINTER(ZhcmExecReport),
     ]

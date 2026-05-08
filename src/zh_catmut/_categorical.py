@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import ctypes
 from collections.abc import Mapping
-from typing import Any, Tuple
+from typing import Any, Literal, Tuple, cast
 
 import numpy as np
 import pandas as pd
@@ -22,7 +22,6 @@ from ._gates import (
     validate_int64,
     validate_lut_array,
     validate_size,
-    validate_threads,
 )
 from ._loader import load_native
 from ._types import NativeExecutionReport, NativeGateReport
@@ -46,7 +45,10 @@ def _raise_for_status(
     raise NativeStatusError(context, int(status), _status_message(lib, int(status)), report)
 
 
-def _execution_flags(allow_missing: bool, threads: int) -> int:
+_CategoricalKind = Literal["series", "categorical", "categorical_index"]
+
+
+def _execution_flags(allow_missing: bool) -> int:
     flags = ZHCM_FLAG_VALIDATE_INPUT | ZHCM_FLAG_COLLECT_COUNTS
     if allow_missing:
         flags |= ZHCM_FLAG_ALLOW_MISSING
@@ -97,19 +99,36 @@ def remap_codes_inplace(
     target_category_count: int,
     missing_code: int = -1,
     allow_missing: bool = True,
-    threads: int = 0,
 ) -> NativeExecutionReport:
-    dtype_code = validate_codes_array(codes)
+    return _remap_codes_inplace(
+        codes,
+        lut,
+        target_category_count=target_category_count,
+        missing_code=missing_code,
+        allow_missing=allow_missing,
+        require_writeable=True,
+    )
+
+
+def _remap_codes_inplace(
+    codes: np.ndarray,
+    lut: np.ndarray,
+    *,
+    target_category_count: int,
+    missing_code: int = -1,
+    allow_missing: bool = True,
+    require_writeable: bool = True,
+) -> NativeExecutionReport:
+    dtype_code = validate_codes_array(codes, require_writeable=require_writeable)
     validate_lut_array(lut)
     target_count = validate_size(target_category_count, "target_category_count")
     missing = validate_int64(missing_code, "missing_code")
-    thread_count = validate_threads(threads)
 
     lib = load_native()
     _predict(lib, codes, dtype_code, lut, target_count, missing, allow_missing)
 
     report = ZhcmExecReport()
-    flags = _execution_flags(allow_missing, thread_count)
+    flags = _execution_flags(allow_missing)
     with temporarily_writeable(codes):
         status = lib.zhcm_remap_lut_inplace(
             ctypes.c_void_p(int(codes.ctypes.data)),
@@ -119,7 +138,6 @@ def remap_codes_inplace(
             lut.size,
             target_count,
             missing,
-            thread_count,
             flags,
             ctypes.byref(report),
         )
@@ -135,20 +153,18 @@ def _remap_codes_copy(
     target_category_count: int,
     missing_code: int = -1,
     allow_missing: bool = True,
-    threads: int = 0,
 ) -> Tuple[np.ndarray, NativeExecutionReport]:
     dtype_code = validate_codes_array(codes)
     validate_lut_array(lut)
     target_count = validate_size(target_category_count, "target_category_count")
     missing = validate_int64(missing_code, "missing_code")
-    thread_count = validate_threads(threads)
 
     destination = np.empty_like(codes)
     lib = load_native()
     _predict(lib, codes, dtype_code, lut, target_count, missing, allow_missing)
 
     report = ZhcmExecReport()
-    flags = _execution_flags(allow_missing, thread_count)
+    flags = _execution_flags(allow_missing)
     status = lib.zhcm_remap_lut_copy(
         ctypes.c_void_p(int(codes.ctypes.data)),
         ctypes.c_void_p(int(destination.ctypes.data)),
@@ -158,7 +174,6 @@ def _remap_codes_copy(
         lut.size,
         target_count,
         missing,
-        thread_count,
         flags,
         ctypes.byref(report),
     )
@@ -168,26 +183,30 @@ def _remap_codes_copy(
 
 
 def _mapped_label(label: Any, mapping: Mapping[object, object]) -> Any:
-    sentinel = object()
     try:
-        mapped = mapping.get(label, sentinel)
+        return mapping.get(label, label)
     except TypeError:
-        mapped = sentinel
-    if mapped is not sentinel:
-        return mapped
-    try:
-        return mapping[label]
-    except (KeyError, TypeError):
         return label
+
+
+def _is_scalar_na(value: Any) -> bool:
+    try:
+        result = pd.isna(value)
+    except Exception:
+        return False
+    return isinstance(result, (bool, np.bool_)) and bool(result)
 
 
 def _labels_equal(left: Any, right: Any) -> bool:
     if left is right:
         return True
     try:
-        return bool(left == right)
+        equal = left == right
+        if equal is pd.NA:
+            return _is_scalar_na(left) and _is_scalar_na(right)
+        return bool(equal)
     except Exception:
-        return False
+        return _is_scalar_na(left) and _is_scalar_na(right)
 
 
 def _category_index(label: Any, categories: list[Any], index: dict[Any, int]) -> int:
@@ -220,40 +239,29 @@ def _build_lut(cat: pd.Categorical, mapping: Mapping[object, object]) -> Tuple[l
 
 
 def _extract_codes(cat: pd.Categorical) -> np.ndarray:
-    codes = getattr(cat, "_codes", None)
+    codes = np.asarray(cat.codes)
     if isinstance(codes, np.ndarray):
         return codes
-    codes = cat.codes
-    if not isinstance(codes, np.ndarray):
-        raise MemoryGateError("could not extract NumPy categorical codes")
-    return codes
-
-
-def _series_has_cow_references(series: pd.Series) -> bool:
-    try:
-        blocks = series._mgr.blocks
-        return any(block.refs.has_reference() for block in blocks if hasattr(block, "refs"))
-    except Exception:
-        return True
+    raise MemoryGateError("could not extract NumPy categorical codes")
 
 
 def _codes_are_owned(codes: np.ndarray) -> bool:
     return bool(codes.flags.owndata) and codes.base is None
 
 
-def _as_categorical(obj: pd.Series | pd.Categorical) -> Tuple[pd.Categorical, bool]:
+def _as_categorical(obj: pd.Series | pd.Categorical | pd.CategoricalIndex) -> Tuple[pd.Categorical, _CategoricalKind]:
     if isinstance(obj, pd.Series):
         if not isinstance(obj.dtype, pd.CategoricalDtype):
             raise TypeError("Series input must have categorical dtype")
-        return obj.array, True
+        return obj.array, "series"
+    if isinstance(obj, pd.CategoricalIndex):
+        return obj.array, "categorical_index"
     if isinstance(obj, pd.Categorical):
-        return obj, False
-    raise TypeError("obj must be a pandas Series or pandas Categorical")
+        return obj, "categorical"
+    raise TypeError("obj must be a pandas Series, pandas Categorical, or pandas CategoricalIndex")
 
 
 def _check_inplace_safety(
-    obj: pd.Series | pd.Categorical,
-    is_series: bool,
     codes: np.ndarray,
     assume_unique: bool,
 ) -> None:
@@ -261,22 +269,33 @@ def _check_inplace_safety(
         return
     if not _codes_are_owned(codes):
         raise CopyOnWriteSafetyError("categorical codes are not uniquely owned")
-    if is_series and _series_has_cow_references(obj):  # type: ignore[arg-type]
-        raise CopyOnWriteSafetyError("Series shares categorical storage under Pandas Copy-on-Write")
+
+
+def _wrap_categorical(
+    obj: pd.Series | pd.Categorical | pd.CategoricalIndex,
+    kind: _CategoricalKind,
+    cat: pd.Categorical,
+) -> pd.Series | pd.Categorical | pd.CategoricalIndex:
+    if kind == "series":
+        series = cast(pd.Series, obj)
+        return pd.Series(cat, index=series.index, name=series.name, copy=False)
+    if kind == "categorical_index":
+        index = cast(pd.CategoricalIndex, obj)
+        return pd.CategoricalIndex(cat, name=index.name)
+    return cat
 
 
 def remap_categorical(
-    obj: pd.Series | pd.Categorical,
+    obj: pd.Series | pd.Categorical | pd.CategoricalIndex,
     mapping: Mapping[object, object],
     *,
     assume_unique: bool = False,
-    copy_fallback: bool = False,
-    threads: int = 0,
-) -> pd.Series | pd.Categorical:
+    copy_fallback: bool = True,
+) -> pd.Series | pd.Categorical | pd.CategoricalIndex:
     if not isinstance(mapping, Mapping):
         raise TypeError("mapping must be a Mapping")
 
-    cat, is_series = _as_categorical(obj)
+    cat, kind = _as_categorical(obj)
     new_categories, lut = _build_lut(cat, mapping)
     codes = _extract_codes(cat)
     validate_codes_array(codes)
@@ -287,16 +306,15 @@ def remap_categorical(
             lut,
             target_category_count=len(new_categories),
             allow_missing=True,
-            threads=threads,
         )
     else:
-        _check_inplace_safety(obj, is_series, codes, assume_unique)
-        remap_codes_inplace(
+        _check_inplace_safety(codes, assume_unique)
+        _remap_codes_inplace(
             codes,
             lut,
             target_category_count=len(new_categories),
             allow_missing=True,
-            threads=threads,
+            require_writeable=False,
         )
         remapped_codes = codes
 
@@ -304,12 +322,9 @@ def remap_categorical(
         remapped_codes,
         categories=new_categories,
         ordered=cat.ordered,
-        validate=False,
+        validate=True,
     )
-    if is_series:
-        series = obj  # type: ignore[assignment]
-        return pd.Series(new_cat, index=series.index, name=series.name, copy=False)
-    return new_cat
+    return _wrap_categorical(obj, kind, new_cat)
 
 
 __all__ = ["remap_categorical", "remap_codes_inplace"]

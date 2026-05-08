@@ -4,13 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "zh-catmut"
-version = "0.1.0"
+version = "0.2.0"
 description = "Native LUT remapping for large Pandas categorical code buffers"
 readme = "README.md"
 requires-python = ">=3.9"
 dependencies = [
-    "numpy",
-    "pandas",
+    "numpy>=1.23",
+    "pandas>=2.0",
 ]
 authors = [
     { name = "Mohamed Hossam" },

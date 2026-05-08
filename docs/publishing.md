@@ -82,6 +82,23 @@ Use these values:
    zh-catmut doctor
    ```
 
+## Terminal token fallback
+
+Trusted Publishing through GitHub Actions is preferred. If the workflow is blocked and you need a direct terminal upload, copy `.env.example` to `.env`, add a scoped PyPI or TestPyPI API token, then run:
+
+```bash
+python -m pip install --upgrade build twine
+python scripts/publish_from_env.py --target testpypi --yes
+```
+
+After TestPyPI verification, publish to PyPI:
+
+```bash
+python scripts/publish_from_env.py --target pypi --yes
+```
+
+The `.env` file is ignored by git and must never be committed.
+
 ## Indexing and discoverability checklist
 
 If `pip install zh-catmut` or PyPI search cannot find the project, first confirm whether it exists on the package index:

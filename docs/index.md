@@ -43,7 +43,6 @@ def remap_codes_inplace(
     target_category_count: int,
     missing_code: int = -1,
     allow_missing: bool = True,
-    threads: int = 0,
 ) -> NativeExecutionReport:
     ...
 ```
@@ -52,12 +51,11 @@ Low-level API for callers that already have a NumPy categorical codes buffer and
 
 Parameters:
 
-- `codes`: one-dimensional, C-contiguous NumPy ndarray with dtype `int8`, `int16`, `int32`, or `int64`.
-- `lut`: one-dimensional, C-contiguous `np.int64` ndarray. Each non-missing source code indexes this array.
+- `codes`: one-dimensional, aligned, writable, C-contiguous NumPy ndarray with dtype `int8`, `int16`, `int32`, or `int64`.
+- `lut`: one-dimensional, aligned, C-contiguous `np.int64` ndarray. Each non-missing source code indexes this array.
 - `target_category_count`: number of categories in the target dictionary. Every non-missing mapped code must be in `[0, target_category_count)`.
 - `missing_code`: missing sentinel. Defaults to `-1`, matching Pandas categorical codes.
 - `allow_missing`: when `True`, missing input codes and LUT outputs equal to `missing_code` are accepted. When `False`, either case is rejected before mutation.
-- `threads`: reserved for future native parallelism. The current implementation accepts `0` or `1` and executes the scalar native remap path.
 
 Return value:
 
@@ -65,9 +63,8 @@ Return value:
 
 Safety behavior:
 
-- Python validates shape, dtype, contiguity, integer bounds, and LUT dtype before pointer export.
+- Python validates shape, dtype, contiguity, alignment, writeability, integer bounds, and LUT dtype before pointer export.
 - Native prediction runs before mutation.
-- Read-only NumPy buffers are temporarily made writeable only for the native call and restored afterward.
 - Invalid native statuses raise `NativeStatusError`.
 - Python-side memory gate failures raise `MemoryGateError`.
 
@@ -75,13 +72,12 @@ Safety behavior:
 
 ```python
 def remap_categorical(
-    obj: pd.Series | pd.Categorical,
+    obj: pd.Series | pd.Categorical | pd.CategoricalIndex,
     mapping: Mapping[object, object],
     *,
     assume_unique: bool = False,
-    copy_fallback: bool = False,
-    threads: int = 0,
-) -> pd.Series | pd.Categorical:
+    copy_fallback: bool = True,
+) -> pd.Series | pd.Categorical | pd.CategoricalIndex:
     ...
 ```
 
@@ -89,23 +85,23 @@ High-level API for category label remapping.
 
 Parameters:
 
-- `obj`: a Pandas `Series` with categorical dtype or a `pd.Categorical`.
+- `obj`: a Pandas `Series` with categorical dtype, `pd.Categorical`, or `pd.CategoricalIndex`.
 - `mapping`: label mapping. Categories not present in the mapping are preserved. Multiple old labels may map to the same new label.
 - `assume_unique`: bypasses the high-level Copy-on-Write uniqueness check and allows controlled in-place mutation after all other gates pass.
-- `copy_fallback`: when `True`, allocate a Python-owned destination codes buffer and use the native copy remap path. The original codes buffer is preserved.
-- `threads`: reserved for future native parallelism. The current implementation accepts `0` or `1` and executes the scalar native remap path.
+- `copy_fallback`: when `True`, allocate a Python-owned destination codes buffer and use the native copy remap path. The original codes buffer is preserved. This is the default.
 
 Return value:
 
 - If the input is a `pd.Categorical`, returns a new `pd.Categorical`.
 - If the input is a `pd.Series`, returns a new `pd.Series` preserving `index` and `name`.
+- If the input is a `pd.CategoricalIndex`, returns a new `pd.CategoricalIndex` preserving `name`.
 
 Categorical semantics:
 
 - The target category list is built from old categories after applying `mapping`.
 - Target categories preserve first-seen order after deduplication.
 - Missing values remain missing.
-- The returned categorical is reattached with `pd.Categorical.from_codes(..., validate=False)` after native validation has proven code ranges.
+- The returned categorical is reattached with `pd.Categorical.from_codes(..., validate=True)` after native validation has proven code ranges.
 
 ## Exceptions
 

@@ -14,7 +14,7 @@
 extern "C" {
 #endif
 
-#define ZHCM_ABI_VERSION 1u
+#define ZHCM_ABI_VERSION 2u
 
 /*
  * Physical signed integer dtype of the Pandas/NumPy categorical codes buffer.
@@ -40,6 +40,7 @@ typedef enum zhcm_status_t {
     ZHCM_ERR_TARGET_OUT_OF_RANGE = 6,
     ZHCM_ERR_INTEGER_OVERFLOW = 7,
     ZHCM_ERR_THREAD_FAILURE = 8,
+    ZHCM_ERR_MISALIGNED_POINTER = 9,
     ZHCM_ERR_PYTHON_GATE_REJECTED = 50,
     ZHCM_ERR_INTERNAL = 255
 } zhcm_status_t;
@@ -50,7 +51,6 @@ typedef enum zhcm_status_t {
 #define ZHCM_FLAG_ALLOW_MISSING   0x0000000000000001ull
 #define ZHCM_FLAG_VALIDATE_INPUT  0x0000000000000002ull
 #define ZHCM_FLAG_COLLECT_COUNTS  0x0000000000000004ull
-#define ZHCM_FLAG_PARALLEL        0x0000000000000008ull
 
 /*
  * Report populated by zhcm_predict_remap_lut before any mutation occurs.
@@ -167,10 +167,8 @@ ZHCM_API int32_t zhcm_predict_remap_lut(
  * it must perform the same predictive validation as zhcm_predict_remap_lut
  * before writing the first element. If validation fails, no writes may occur.
  *
- * Arguments are identical to zhcm_predict_remap_lut, plus:
- * - thread_count: reserved for future native parallelism. The V1 kernel is
- *   scalar; callers should pass 0 or 1.
- * - out_report: optional pointer to a caller-allocated execution report.
+ * Arguments are identical to zhcm_predict_remap_lut, plus out_report: optional
+ * pointer to a caller-allocated execution report.
  *
  * Ownership:
  * - codes_ptr remains owned by Python.
@@ -187,21 +185,20 @@ ZHCM_API int32_t zhcm_remap_lut_inplace(
     uintptr_t lut_len,
     uintptr_t target_category_count,
     int64_t missing_code,
-    uint32_t thread_count,
     uint64_t flags,
     zhcm_exec_report_t *out_report
 );
 
 /*
- * Copying LUT remapping for CoW fallback.
+ * Copying LUT remapping.
  *
  * This function reads src_codes_ptr and writes dst_codes_ptr. Python allocates
  * both buffers and owns both buffers. The native library never allocates or
  * frees them.
  *
- * Use this only when Python cannot prove that in-place mutation is safe under
- * Pandas Copy-on-Write semantics. It preserves the same C-ABI boundary and
- * primitive-only crossing, but it is not the preferred zero-copy path.
+ * Use this when the caller wants to preserve the source buffer or cannot prove
+ * that in-place mutation is safe. It preserves the same C-ABI boundary and
+ * primitive-only crossing.
  */
 ZHCM_API int32_t zhcm_remap_lut_copy(
     const void *src_codes_ptr,
@@ -212,7 +209,6 @@ ZHCM_API int32_t zhcm_remap_lut_copy(
     uintptr_t lut_len,
     uintptr_t target_category_count,
     int64_t missing_code,
-    uint32_t thread_count,
     uint64_t flags,
     zhcm_exec_report_t *out_report
 );

@@ -3,163 +3,113 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="zh_catmut architecture: Python safety layer, Zig native core, and strict C ABI boundary.">
-    <title>zh_catmut Architecture | Boundary design</title>
-    <!-- Social preview -->
-    <meta name="title" content="zh_catmut Architecture | Boundary design">
+    <title>Architecture · zh_catmut</title>
+    <meta name="description" content="Python safety layer, C ABI boundary, and Zig native remapping architecture.">
+    <meta name="robots" content="index,follow">
+    <meta name="title" content="Architecture · zh_catmut">
     <link rel="canonical" href="https://mohamedhossammohamed.github.io/zh_catmut/architecture.html">
+    <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="assets/social/og-image.png">
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="zh_catmut">
     <meta property="og:url" content="https://mohamedhossammohamed.github.io/zh_catmut/architecture.html">
-    <meta property="og:title" content="zh_catmut Architecture | Boundary design">
-    <meta property="og:description" content="zh_catmut architecture: Python safety layer, Zig native core, and strict C ABI boundary.">
+    <meta property="og:title" content="Architecture · zh_catmut">
+    <meta property="og:description" content="Python safety layer, C ABI boundary, and Zig native remapping architecture.">
     <meta property="og:image" content="https://mohamedhossammohamed.github.io/zh_catmut/assets/social/og-image.png">
     <meta property="og:image:secure_url" content="https://mohamedhossammohamed.github.io/zh_catmut/assets/social/og-image.png">
     <meta property="og:image:type" content="image/png">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
-    <meta property="og:image:alt" content="zh_catmut native Pandas categorical remapping preview card">
+    <meta property="og:image:alt" content="Python safety layer, C ABI boundary, and Zig native remapping architecture.">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:site" content="@MohamedHz72007">
     <meta name="twitter:creator" content="@MohamedHz72007">
     <meta name="twitter:url" content="https://mohamedhossammohamed.github.io/zh_catmut/architecture.html">
-    <meta name="twitter:title" content="zh_catmut Architecture | Boundary design">
-    <meta name="twitter:description" content="zh_catmut architecture: Python safety layer, Zig native core, and strict C ABI boundary.">
+    <meta name="twitter:title" content="Architecture · zh_catmut">
+    <meta name="twitter:description" content="Python safety layer, C ABI boundary, and Zig native remapping architecture.">
     <meta name="twitter:image" content="https://mohamedhossammohamed.github.io/zh_catmut/assets/social/og-image.png">
-    <meta name="twitter:image:alt" content="zh_catmut native Pandas categorical remapping preview card">
-    <!-- /Social preview -->
+    <meta name="twitter:image:alt" content="Python safety layer, C ABI boundary, and Zig native remapping architecture.">
     <link rel="stylesheet" href="assets/css/site.css">
-    <style>
-      .md-article h1{font-size:2.2rem;margin:2.2rem 0 1rem}
-      .md-article h2{font-size:1.6rem;margin:2rem 0 0.8rem;color:var(--python)}
-      .md-article h3{font-size:1.25rem;margin:1.4rem 0 0.6rem;color:var(--cyan)}
-      .md-article p{line-height:1.75;margin:0.8rem 0}
-      .md-article ul,.md-article ol{margin:0.8rem 0;padding-left:1.4rem}
-      .md-article li{margin:0.35rem 0}
-      .md-article code{background:rgba(255,255,255,0.06);padding:0.15rem 0.4rem;border-radius:6px;font-size:0.92em}
-      .md-article pre{background:rgba(0,0,0,0.35);border:1px solid var(--line);border-radius:14px;padding:1.1rem 1.3rem;overflow-x:auto}
-      .md-article pre code{background:none;padding:0}
-      .md-article table{width:100%;border-collapse:collapse;margin:1rem 0}
-      .md-article th,.md-article td{padding:0.6rem 0.8rem;border:1px solid var(--line);text-align:left}
-      .md-article th{background:rgba(255,255,255,0.05)}
-      .md-article blockquote{border-left:3px solid var(--violet);padding-left:1rem;margin:1rem 0;color:var(--muted)}
-      .md-article a{color:var(--python);text-decoration:underline;text-underline-offset:3px}
-      .md-article hr{border:none;border-top:1px solid var(--line);margin:2rem 0}
-      .md-article .toc{background:rgba(13,20,35,0.6);border:1px solid var(--line);border-radius:16px;padding:1.2rem 1.6rem;margin:1.2rem 0}
-      .md-article .toc ul{list-style:none;padding-left:0}
-      .md-article .toc li{margin:0.3rem 0}
-      .md-article .toc a{color:var(--muted);text-decoration:none}
-      .md-article .toc a:hover{color:var(--text)}
-      .mermaid{background:rgba(0,0,0,0.2);border-radius:14px;padding:1rem}
-    </style>
   </head>
   <body>
     <a class="skip-link" href="#main">Skip to content</a>
-    <canvas class="particle-canvas" data-particles aria-hidden="true"></canvas>
+    
     <div class="site-shell">
       <header class="nav">
         <div class="nav-inner">
           <a class="brand" href="index.html" aria-label="zh_catmut home">
             <span class="brand-mark" aria-hidden="true"></span>
-            <span class="brand-text">
-              <span class="brand-name">zh_catmut</span>
-              <span class="brand-subtitle">docs</span>
-            </span>
+            <span class="brand-text"><span class="brand-name">zh_catmut</span><span class="brand-subtitle">native categorical remapping</span></span>
           </a>
           <button class="nav-toggle" type="button" data-nav-toggle aria-label="Toggle navigation" aria-expanded="false"><span></span></button>
           <nav class="nav-links" aria-label="Primary navigation">
-            <a href="index.html">Landing</a>
-            <a href="docs.html">Docs</a>
-            <a href="architecture.html">Architecture</a>
-            <a href="https://github.com/mohamedhossammohamed/zh_catmut" target="_blank" rel="noopener">GitHub</a>
+            <a href="index.html">Home</a>
+<a href="docs.html">Docs</a>
+<a href="architecture.html" aria-current="page">Architecture</a>
+<a href="publishing.html">Publishing</a>
+<a href="changelog.html">Changelog</a>
           </nav>
         </div>
       </header>
-
       <main id="main">
         <section class="page-hero">
           <div class="container">
             <div class="reveal">
-              <p class="eyebrow"><span class="eyebrow-dot"></span>How Python and Zig meet without sharing objects</p>
+              <p class="eyebrow"><span class="eyebrow-dot"></span>Python safety layer, C ABI boundary, and Zig native remapping architecture.</p>
               <h1>Architecture</h1>
-              <p>Python owns every buffer. Native code borrows pointers, lengths, and flags. The boundary is deliberately narrow.</p>
+            </div>
+            <div class="page-meta reveal">
+              <div class="meta-box"><strong>Version</strong><span>0.2.0 / ABI 2</span></div>
+              <div class="meta-box"><strong>Runtime</strong><span>Python 3.9+, NumPy >= 1.23, Pandas >= 2.0</span></div>
+              <div class="meta-box"><strong>Native core</strong><span>Zig shared library through a C ABI</span></div>
             </div>
           </div>
         </section>
-
         <div class="container docs-layout">
-          <aside class="docs-sidebar reveal" aria-label="Documentation contents">
-            <strong>Contents</strong>
-            <nav>
-              
-            </nav>
-          </aside>
-
-          <article class="doc-article md-article">
-            <h1 id="zh_catmut-architecture">zh_catmut Architecture</h1>
-<p><code>zh_catmut</code> is split into a Python safety layer and a Zig native remapping core. The boundary between them is a strict C ABI: Python owns every input and output buffer, while native code receives only raw addresses, integer lengths, primitive flags, and POD report structs.</p>
-<h2 id="layers">Layers</h2>
-<h3 id="python-api-layer">Python API Layer</h3>
-<p>The public API lives in <code>zh_catmut._categorical</code>:</p>
-<ul>
-<li><code>remap_codes_inplace</code>: low-level NumPy codes remap.</li>
-<li><code>remap_categorical</code>: high-level Pandas categorical remap.</li>
-</ul>
-<p>The Python layer performs:</p>
-<ul>
-<li>dtype checks for <code>np.int8</code>, <code>np.int16</code>, <code>np.int32</code>, and <code>np.int64</code>;</li>
-<li>one-dimensional and C-contiguous checks;</li>
-<li><code>np.int64</code> LUT checks;</li>
-<li><code>size_t</code>, <code>int64</code>, and <code>uint32</code> bounds checks;</li>
-<li>temporary NumPy writeability management;</li>
-<li>Pandas Copy-on-Write safety checks for high-level in-place mutation;</li>
-<li>reattachment through <code>pd.Categorical.from_codes(..., validate=False)</code>.</li>
-</ul>
-<h3 id="loader-layer">Loader Layer</h3>
-<p>The loader resolves the bundled platform library through <code>importlib.resources</code>:</p>
-<ul>
-<li>Linux: <code>libzh_catmut.so</code></li>
-<li>macOS: <code>libzh_catmut.dylib</code></li>
-<li>Windows: <code>zh_catmut.dll</code></li>
-</ul>
-<p>It uses <code>ctypes.CDLL</code>, declares exact <code>argtypes</code> and <code>restype</code> values, then verifies <code>zhcm_abi_version() == 1</code>.</p>
-<h3 id="native-core">Native Core</h3>
-<p>The native core is implemented in Zig and exports stable C symbols:</p>
-<ul>
-<li><code>zhcm_abi_version</code></li>
-<li><code>zhcm_status_message</code></li>
-<li><code>zhcm_predict_remap_lut</code></li>
-<li><code>zhcm_remap_lut_inplace</code></li>
-<li><code>zhcm_remap_lut_copy</code></li>
-</ul>
-<p>The hot operation is dense LUT remapping:</p>
-<pre><code class="language-text">if old_code == missing_code:
+          <aside class="docs-sidebar reveal" aria-label="Page contents"><strong>On this page</strong><nav><a href="#layers">Layers</a>
+<a href="#c-abi-boundary">C-ABI Boundary</a>
+<a href="#validation-and-mutation-flow">Validation and Mutation Flow</a>
+<a href="#memory-ownership">Memory Ownership</a>
+<a href="#copy-on-write-strategy">Copy-on-Write Strategy</a>
+<a href="#error-model">Error Model</a>
+<a href="#packaging">Packaging</a></nav></aside>
+          <article class="doc-article">
+            <section class="doc-section reveal" id="overview">
+  <h2>Overview</h2>
+  <p><code>zh_catmut</code> is split into a Python safety layer and a Zig native remapping core. The boundary between them is a strict C ABI: Python owns every input and output buffer, while native code receives only raw addresses, integer lengths, primitive flags, and POD report structs.</p>
+</section>
+<section class="doc-section reveal" id="layers">
+  <h2>Layers</h2>
+  <h3 id="python-api-layer">Python API Layer</h3>
+  <p>The public API lives in <code>zh_catmut._categorical</code>:</p>
+  <ul><li><code>remap_codes_inplace</code>: low-level NumPy codes remap.</li><li><code>remap_categorical</code>: high-level Pandas categorical remap.</li></ul>
+  <p>The Python layer performs:</p>
+  <ul><li>dtype checks for <code>np.int8</code>, <code>np.int16</code>, <code>np.int32</code>, and <code>np.int64</code>;</li><li>one-dimensional, C-contiguous, and aligned buffer checks;</li><li><code>np.int64</code> LUT checks;</li><li><code>size_t</code> and <code>int64</code> bounds checks;</li><li>writeability checks for low-level in-place mutation;</li><li>explicit-copy Pandas remapping by default;</li><li>reattachment through <code>pd.Categorical.from_codes(..., validate=True)</code>.</li></ul>
+  <h3 id="loader-layer">Loader Layer</h3>
+  <p>The loader resolves the bundled platform library through <code>importlib.resources</code>:</p>
+  <ul><li>Linux: <code>libzh_catmut.so</code></li><li>macOS: <code>libzh_catmut.dylib</code></li><li>Windows: <code>zh_catmut.dll</code></li></ul>
+  <p>It uses <code>ctypes.CDLL</code>, declares exact <code>argtypes</code> and <code>restype</code> values, then verifies <code>zhcm_abi_version() == 2</code>.</p>
+  <h3 id="native-core">Native Core</h3>
+  <p>The native core is implemented in Zig and exports stable C symbols:</p>
+  <ul><li><code>zhcm_abi_version</code></li><li><code>zhcm_status_message</code></li><li><code>zhcm_predict_remap_lut</code></li><li><code>zhcm_remap_lut_inplace</code></li><li><code>zhcm_remap_lut_copy</code></li></ul>
+  <p>The hot operation is dense LUT remapping:</p>
+  <div class="code-panel"><pre data-copy><code class="language-text">if old_code == missing_code:
     preserve missing_code
 else:
-    new_code = lut[old_code]
-</code></pre>
-<p>The native core supports signed integer code buffers with physical dtypes <code>int8</code>, <code>int16</code>, <code>int32</code>, and <code>int64</code>.</p>
-<h2 id="c-abi-boundary">C-ABI Boundary</h2>
-<p>The boundary deliberately excludes Python objects, Pandas objects, NumPy object arrays, strings, dictionaries, JSON, and serialized payloads. Category labels never cross into native code.</p>
-<p>Native functions receive:</p>
-<ul>
-<li><code>void *</code> or <code>const void *</code> pointers for code buffers;</li>
-<li><code>int64_t *</code> pointer for the dense LUT;</li>
-<li><code>uintptr_t</code> lengths;</li>
-<li>integer dtype IDs;</li>
-<li>primitive flags;</li>
-<li>caller-allocated report structs.</li>
-</ul>
-<p>Native code never:</p>
-<ul>
-<li>stores borrowed pointers after return;</li>
-<li>frees Python-owned buffers;</li>
-<li>allocates output buffers;</li>
-<li>calls the Python C API;</li>
-<li>writes outside the logical element count.</li>
-</ul>
-<h2 id="validation-and-mutation-flow">Validation and Mutation Flow</h2>
-<pre class="mermaid">sequenceDiagram
+    new_code = lut[old_code]</code></pre></div>
+  <p>The native core supports signed integer code buffers with physical dtypes <code>int8</code>, <code>int16</code>, <code>int32</code>, and <code>int64</code>.</p>
+</section>
+<section class="doc-section reveal" id="c-abi-boundary">
+  <h2>C-ABI Boundary</h2>
+  <p>The boundary deliberately excludes Python objects, Pandas objects, NumPy object arrays, strings, dictionaries, JSON, and serialized payloads. Category labels never cross into native code.</p>
+  <p>Native functions receive:</p>
+  <ul><li><code>void *</code> or <code>const void *</code> pointers for code buffers;</li><li><code>int64_t *</code> pointer for the dense LUT;</li><li><code>uintptr_t</code> lengths;</li><li>integer dtype IDs;</li><li>primitive flags;</li><li>caller-allocated report structs.</li></ul>
+  <p>Native code never:</p>
+  <ul><li>stores borrowed pointers after return;</li><li>frees Python-owned buffers;</li><li>allocates output buffers;</li><li>calls the Python C API;</li><li>writes outside the logical element count.</li></ul>
+</section>
+<section class="doc-section reveal" id="validation-and-mutation-flow">
+  <h2>Validation and Mutation Flow</h2>
+  <pre class="mermaid">sequenceDiagram
     participant User
     participant Py as Python API
     participant Gate as Python Gates
@@ -169,69 +119,63 @@ else:
 
     User-&gt;&gt;Py: remap_categorical(obj, mapping)
     Py-&gt;&gt;Py: Build target categories and dense int64 LUT
-    Py-&gt;&gt;Gate: Validate dtype, shape, contiguity, bounds
-    Gate-&gt;&gt;Gate: Check Copy-on-Write safety or select copy fallback
+    Py-&gt;&gt;Gate: Validate dtype, shape, contiguity, alignment, bounds
+    Gate-&gt;&gt;Gate: Select default copy path or expert in-place override
     Py-&gt;&gt;ABI: zhcm_predict_remap_lut(codes_ptr, lut_ptr, lengths, flags)
     ABI-&gt;&gt;Zig: Borrow raw pointers for validation only
     Zig-&gt;&gt;Zig: Validate code range, LUT range, target range, missing policy
     Zig--&gt;&gt;ABI: Gate report and status
     ABI--&gt;&gt;Py: Raise on failure before mutation
-    Py-&gt;&gt;Gate: Temporarily enable NumPy writeability if needed
     Py-&gt;&gt;ABI: zhcm_remap_lut_inplace(...) or zhcm_remap_lut_copy(...)
     ABI-&gt;&gt;Zig: Borrow raw pointers for one batch remap
     Zig-&gt;&gt;Zig: Remap contiguous integer buffer
     Zig--&gt;&gt;ABI: Execution report
     ABI--&gt;&gt;Py: Return status and counts
-    Py-&gt;&gt;Gate: Restore original writeability flag
-    Py-&gt;&gt;Pandas: pd.Categorical.from_codes(..., validate=False)
-    Pandas--&gt;&gt;User: New Series or Categorical
-</pre>
-<h2 id="memory-ownership">Memory Ownership</h2>
-<p>V1 is Python-owned-buffer-only:</p>
-<ul>
-<li>In-place remap mutates <code>codes[0:item_count]</code>.</li>
-<li>Copy remap reads <code>src_codes[0:item_count]</code> and writes <code>dst_codes[0:item_count]</code>.</li>
-<li>The destination buffer for copy fallback is allocated by Python with <code>np.empty_like</code>.</li>
-<li>The native library does not allocate heap memory for output and therefore has no native output ownership to clean up.</li>
-</ul>
-<p>Deterministic cleanup happens at the Python boundary:</p>
-<ul>
-<li>temporary writeability changes are restored in <code>finally</code>;</li>
-<li><code>ctypes</code> calls keep Python arrays referenced until return;</li>
-<li>borrowed native pointers expire when the native function returns;</li>
-<li>the loader keeps its resource <code>ExitStack</code> alive for the process lifetime of the loaded shared library.</li>
-</ul>
-<h2 id="copy-on-write-strategy">Copy-on-Write Strategy</h2>
-<p><code>remap_categorical</code> defaults to safety. It rejects high-level in-place mutation when the codes buffer is not owned or when Pandas block reference tracking indicates shared storage.</p>
-<p>Two opt-in paths exist:</p>
-<ul>
-<li><code>copy_fallback=True</code>: allocate a destination NumPy buffer and call <code>zhcm_remap_lut_copy</code>, preserving the original source buffer.</li>
-<li><code>assume_unique=True</code>: allow in-place mutation after dtype, shape, range, and native validation gates pass.</li>
-</ul>
-<h2 id="error-model">Error Model</h2>
-<p>Python-side gate failures raise <code>MemoryGateError</code> or <code>CopyOnWriteSafetyError</code>.</p>
-<p>Native failures return stable integer status codes and are converted to <code>NativeStatusError</code>. Reports include invalid input/output counts and the first invalid index/code pair when applicable.</p>
-<h2 id="packaging">Packaging</h2>
-<p><code>setup.py</code> invokes <code>zig build --release=fast</code>, copies the generated shared library into the Python package directory, and includes platform library names as package data. End users load the bundled binary through normal Python imports; no native compiler is required when installing a prebuilt wheel.</p>
+    Py-&gt;&gt;Pandas: pd.Categorical.from_codes(..., validate=True)
+    Pandas--&gt;&gt;User: New Series, Categorical, or CategoricalIndex</pre>
+</section>
+<section class="doc-section reveal" id="memory-ownership">
+  <h2>Memory Ownership</h2>
+  <p>V2 is Python-owned-buffer-only:</p>
+  <ul><li>In-place remap mutates <code>codes[0:item_count]</code>.</li><li>Copy remap reads <code>src_codes[0:item_count]</code> and writes <code>dst_codes[0:item_count]</code>.</li><li>The destination buffer for copy fallback is allocated by Python with <code>np.empty_like</code>.</li><li>The native library does not allocate heap memory for output and therefore has no native output ownership to clean up.</li></ul>
+  <p>Deterministic cleanup happens at the Python boundary:</p>
+  <ul><li>temporary writeability changes are restored in <code>finally</code>;</li><li><code>ctypes</code> calls keep Python arrays referenced until return;</li><li>borrowed native pointers expire when the native function returns;</li><li>the loader keeps its resource <code>ExitStack</code> alive for the process lifetime of the loaded shared library.</li></ul>
+</section>
+<section class="doc-section reveal" id="copy-on-write-strategy">
+  <h2>Copy-on-Write Strategy</h2>
+  <p><code>remap_categorical</code> defaults to safety. It uses public Pandas APIs to read categorical codes and writes into a Python-owned destination buffer by default.</p>
+  <p>Two opt-in paths exist:</p>
+  <ul><li><code>copy_fallback=True</code>: allocate a destination NumPy buffer and call <code>zhcm_remap_lut_copy</code>, preserving the original source buffer.</li><li><code>assume_unique=True</code> with <code>copy_fallback=False</code>: expert-only in-place mutation after dtype, shape, alignment, range, and native validation gates pass.</li></ul>
+</section>
+<section class="doc-section reveal" id="error-model">
+  <h2>Error Model</h2>
+  <p>Python-side gate failures raise <code>MemoryGateError</code> or <code>CopyOnWriteSafetyError</code>.</p>
+  <p>Native failures return stable integer status codes and are converted to <code>NativeStatusError</code>. Reports include invalid input/output counts and the first invalid index/code pair when applicable.</p>
+</section>
+<section class="doc-section reveal" id="packaging">
+  <h2>Packaging</h2>
+  <p><code>setup.py</code> invokes <code>zig build --release=fast</code>, copies the generated shared library into the Python package directory, and includes platform library names as package data. End users load the bundled binary through normal Python imports; no native compiler is required when installing a prebuilt wheel.</p>
+</section>
           </article>
         </div>
       </main>
-
       <footer class="site-footer">
         <div class="footer-inner">
-          <div>zh_catmut: native LUT remapping for large Pandas categorical code buffers.</div>
+          <span>Apache-2.0 · Generated from Markdown by <code>scripts/build_docs.py</code></span>
           <div class="footer-links">
+            <a href="index.html">Home</a>
             <a href="docs.html">Docs</a>
-            <a href="architecture.html">Architecture</a>
-            <a href="index.html">Landing</a>
-            <a href="https://github.com/mohamedhossammohamed" target="_blank" rel="noopener">GitHub</a>
-            <a href="https://x.com/MohamedHz72007" target="_blank" rel="noopener">X</a>
-            <a href="https://www.apache.org/licenses/LICENSE-2.0" target="_blank" rel="noopener">Apache-2.0</a>
+            <a href="changelog.html">Changelog</a>
+            <a href="https://github.com/mohamedhossammohamed/zh_catmut">GitHub</a>
           </div>
         </div>
       </footer>
     </div>
-    <script src="assets/js/site.js"></script>
-    <script type="module">import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";mermaid.initialize({startOnLoad:true,theme:"dark"});</script>
+    <script src="assets/js/site.js" defer></script>
+    
+    <script type="module">
+      import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+      mermaid.initialize({ startOnLoad: true, theme: window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "default" });
+    </script>
   </body>
 </html>

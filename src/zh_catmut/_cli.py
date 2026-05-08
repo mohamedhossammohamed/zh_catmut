@@ -4,12 +4,12 @@ import argparse
 import platform
 import sys
 import textwrap
-from importlib.metadata import PackageNotFoundError, version
 from typing import Sequence
 
 import numpy as np
 import pandas as pd
 
+from . import __version__
 from ._abi import ZHCM_ABI_VERSION
 from ._categorical import remap_categorical, remap_codes_inplace
 from ._loader import load_native
@@ -19,10 +19,7 @@ REPO_URL = "https://github.com/mohamedhossammohamed/zh_catmut"
 
 
 def _package_version() -> str:
-    try:
-        return version("zh-catmut")
-    except PackageNotFoundError:
-        return "0.1.0"
+    return __version__
 
 
 def _print_block(text: str) -> None:
@@ -40,7 +37,6 @@ def _cmd_example(_: argparse.Namespace) -> int:
         out = remap_categorical(
             series,
             {"old": "new"},
-            copy_fallback=True,
         )
 
         print(out.tolist())
@@ -67,7 +63,7 @@ def _cmd_doctor(_: argparse.Namespace) -> int:
             raise RuntimeError(f"low-level remap produced {codes.tolist()!r}")
 
         series = pd.Series(pd.Categorical(["new", "old", "old", None]))
-        out = remap_categorical(series, {"old": "new"}, copy_fallback=True)
+        out = remap_categorical(series, {"old": "new"})
         if out.iloc[:3].tolist() != ["new", "new", "new"] or not pd.isna(out.iloc[3]):
             raise RuntimeError(f"high-level remap produced {out.tolist()!r}")
 
@@ -109,7 +105,7 @@ def _cmd_info(_: argparse.Namespace) -> int:
           from zh_catmut import remap_categorical, remap_codes_inplace
 
         Safe default for Pandas callers:
-          remap_categorical(series, mapping, copy_fallback=True)
+          remap_categorical(series, mapping)
 
         Docs:
           {DOCS_URL}
@@ -135,7 +131,7 @@ def build_parser() -> argparse.ArgumentParser:
     doctor = subparsers.add_parser("doctor", help="verify imports, native library loading, and remap smoke tests")
     doctor.set_defaults(func=_cmd_doctor)
 
-    example = subparsers.add_parser("example", help="print a minimal copy_fallback=True usage example")
+    example = subparsers.add_parser("example", help="print a minimal Pandas usage example")
     example.set_defaults(func=_cmd_example)
 
     return parser

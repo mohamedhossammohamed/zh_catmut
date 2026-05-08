@@ -14,12 +14,12 @@ The public API lives in `zh_catmut._categorical`:
 The Python layer performs:
 
 - dtype checks for `np.int8`, `np.int16`, `np.int32`, and `np.int64`;
-- one-dimensional and C-contiguous checks;
+- one-dimensional, C-contiguous, and aligned buffer checks;
 - `np.int64` LUT checks;
-- `size_t`, `int64`, and `uint32` bounds checks;
-- temporary NumPy writeability management;
-- Pandas Copy-on-Write safety checks for high-level in-place mutation;
-- reattachment through `pd.Categorical.from_codes(..., validate=False)`.
+- `size_t` and `int64` bounds checks;
+- writeability checks for low-level in-place mutation;
+- explicit-copy Pandas remapping by default;
+- reattachment through `pd.Categorical.from_codes(..., validate=True)`.
 
 ### Loader Layer
 
@@ -29,7 +29,7 @@ The loader resolves the bundled platform library through `importlib.resources`:
 - macOS: `libzh_catmut.dylib`
 - Windows: `zh_catmut.dll`
 
-It uses `ctypes.CDLL`, declares exact `argtypes` and `restype` values, then verifies `zhcm_abi_version() == 1`.
+It uses `ctypes.CDLL`, declares exact `argtypes` and `restype` values, then verifies `zhcm_abi_version() == 2`.
 
 ### Native Core
 
@@ -86,27 +86,25 @@ sequenceDiagram
 
     User->>Py: remap_categorical(obj, mapping)
     Py->>Py: Build target categories and dense int64 LUT
-    Py->>Gate: Validate dtype, shape, contiguity, bounds
-    Gate->>Gate: Check Copy-on-Write safety or select copy fallback
+    Py->>Gate: Validate dtype, shape, contiguity, alignment, bounds
+    Gate->>Gate: Select default copy path or expert in-place override
     Py->>ABI: zhcm_predict_remap_lut(codes_ptr, lut_ptr, lengths, flags)
     ABI->>Zig: Borrow raw pointers for validation only
     Zig->>Zig: Validate code range, LUT range, target range, missing policy
     Zig-->>ABI: Gate report and status
     ABI-->>Py: Raise on failure before mutation
-    Py->>Gate: Temporarily enable NumPy writeability if needed
     Py->>ABI: zhcm_remap_lut_inplace(...) or zhcm_remap_lut_copy(...)
     ABI->>Zig: Borrow raw pointers for one batch remap
     Zig->>Zig: Remap contiguous integer buffer
     Zig-->>ABI: Execution report
     ABI-->>Py: Return status and counts
-    Py->>Gate: Restore original writeability flag
-    Py->>Pandas: pd.Categorical.from_codes(..., validate=False)
-    Pandas-->>User: New Series or Categorical
+    Py->>Pandas: pd.Categorical.from_codes(..., validate=True)
+    Pandas-->>User: New Series, Categorical, or CategoricalIndex
 ```
 
 ## Memory Ownership
 
-V1 is Python-owned-buffer-only:
+V2 is Python-owned-buffer-only:
 
 - In-place remap mutates `codes[0:item_count]`.
 - Copy remap reads `src_codes[0:item_count]` and writes `dst_codes[0:item_count]`.
@@ -122,12 +120,12 @@ Deterministic cleanup happens at the Python boundary:
 
 ## Copy-on-Write Strategy
 
-`remap_categorical` defaults to safety. It rejects high-level in-place mutation when the codes buffer is not owned or when Pandas block reference tracking indicates shared storage.
+`remap_categorical` defaults to safety. It uses public Pandas APIs to read categorical codes and writes into a Python-owned destination buffer by default.
 
 Two opt-in paths exist:
 
 - `copy_fallback=True`: allocate a destination NumPy buffer and call `zhcm_remap_lut_copy`, preserving the original source buffer.
-- `assume_unique=True`: allow in-place mutation after dtype, shape, range, and native validation gates pass.
+- `assume_unique=True` with `copy_fallback=False`: expert-only in-place mutation after dtype, shape, alignment, range, and native validation gates pass.
 
 ## Error Model
 

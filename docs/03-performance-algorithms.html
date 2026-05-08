@@ -3,352 +3,138 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="SIMD optimization, CPU cache locality, multi-threading, and lookup table strategies.">
-    <title>zh_catmut | Performance & Algorithms</title>
-    <!-- Social preview -->
-    <meta name="title" content="zh_catmut | Performance &amp; Algorithms">
+    <title>Performance Algorithms · zh_catmut</title>
+    <meta name="description" content="Dense LUT remapping complexity, validation phases, code widths, and cache behavior.">
+    <meta name="robots" content="index,follow">
+    <meta name="title" content="Performance Algorithms · zh_catmut">
     <link rel="canonical" href="https://mohamedhossammohamed.github.io/zh_catmut/03-performance-algorithms.html">
+    <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="assets/social/og-image.png">
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="zh_catmut">
     <meta property="og:url" content="https://mohamedhossammohamed.github.io/zh_catmut/03-performance-algorithms.html">
-    <meta property="og:title" content="zh_catmut | Performance &amp; Algorithms">
-    <meta property="og:description" content="SIMD optimization, CPU cache locality, multi-threading, and lookup table strategies.">
+    <meta property="og:title" content="Performance Algorithms · zh_catmut">
+    <meta property="og:description" content="Dense LUT remapping complexity, validation phases, code widths, and cache behavior.">
     <meta property="og:image" content="https://mohamedhossammohamed.github.io/zh_catmut/assets/social/og-image.png">
     <meta property="og:image:secure_url" content="https://mohamedhossammohamed.github.io/zh_catmut/assets/social/og-image.png">
     <meta property="og:image:type" content="image/png">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
-    <meta property="og:image:alt" content="zh_catmut native Pandas categorical remapping preview card">
+    <meta property="og:image:alt" content="Dense LUT remapping complexity, validation phases, code widths, and cache behavior.">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:site" content="@MohamedHz72007">
     <meta name="twitter:creator" content="@MohamedHz72007">
     <meta name="twitter:url" content="https://mohamedhossammohamed.github.io/zh_catmut/03-performance-algorithms.html">
-    <meta name="twitter:title" content="zh_catmut | Performance &amp; Algorithms">
-    <meta name="twitter:description" content="SIMD optimization, CPU cache locality, multi-threading, and lookup table strategies.">
+    <meta name="twitter:title" content="Performance Algorithms · zh_catmut">
+    <meta name="twitter:description" content="Dense LUT remapping complexity, validation phases, code widths, and cache behavior.">
     <meta name="twitter:image" content="https://mohamedhossammohamed.github.io/zh_catmut/assets/social/og-image.png">
-    <meta name="twitter:image:alt" content="zh_catmut native Pandas categorical remapping preview card">
-    <!-- /Social preview -->
+    <meta name="twitter:image:alt" content="Dense LUT remapping complexity, validation phases, code widths, and cache behavior.">
     <link rel="stylesheet" href="assets/css/site.css">
-    <style>
-      .md-article h1{font-size:2.2rem;margin:2.2rem 0 1rem}
-      .md-article h2{font-size:1.6rem;margin:2rem 0 0.8rem;color:var(--python)}
-      .md-article h3{font-size:1.25rem;margin:1.4rem 0 0.6rem;color:var(--cyan)}
-      .md-article p{line-height:1.75;margin:0.8rem 0}
-      .md-article ul,.md-article ol{margin:0.8rem 0;padding-left:1.4rem}
-      .md-article li{margin:0.35rem 0}
-      .md-article code{background:rgba(255,255,255,0.06);padding:0.15rem 0.4rem;border-radius:6px;font-size:0.92em}
-      .md-article pre{background:rgba(0,0,0,0.35);border:1px solid var(--line);border-radius:14px;padding:1.1rem 1.3rem;overflow-x:auto}
-      .md-article pre code{background:none;padding:0}
-      .md-article table{width:100%;border-collapse:collapse;margin:1rem 0}
-      .md-article th,.md-article td{padding:0.6rem 0.8rem;border:1px solid var(--line);text-align:left}
-      .md-article th{background:rgba(255,255,255,0.05)}
-      .md-article blockquote{border-left:3px solid var(--violet);padding-left:1rem;margin:1rem 0;color:var(--muted)}
-      .md-article a{color:var(--python);text-decoration:underline;text-underline-offset:3px}
-      .md-article hr{border:none;border-top:1px solid var(--line);margin:2rem 0}
-      .md-article .toc{background:rgba(13,20,35,0.6);border:1px solid var(--line);border-radius:16px;padding:1.2rem 1.6rem;margin:1.2rem 0}
-      .md-article .toc ul{list-style:none;padding-left:0}
-      .md-article .toc li{margin:0.3rem 0}
-      .md-article .toc a{color:var(--muted);text-decoration:none}
-      .md-article .toc a:hover{color:var(--text)}
-      .mermaid{background:rgba(0,0,0,0.2);border-radius:14px;padding:1rem}
-    </style>
   </head>
   <body>
     <a class="skip-link" href="#main">Skip to content</a>
-    <canvas class="particle-canvas" data-particles aria-hidden="true"></canvas>
+    
     <div class="site-shell">
       <header class="nav">
         <div class="nav-inner">
           <a class="brand" href="index.html" aria-label="zh_catmut home">
             <span class="brand-mark" aria-hidden="true"></span>
-            <span class="brand-text">
-              <span class="brand-name">zh_catmut</span>
-              <span class="brand-subtitle">docs</span>
-            </span>
+            <span class="brand-text"><span class="brand-name">zh_catmut</span><span class="brand-subtitle">native categorical remapping</span></span>
           </a>
           <button class="nav-toggle" type="button" data-nav-toggle aria-label="Toggle navigation" aria-expanded="false"><span></span></button>
           <nav class="nav-links" aria-label="Primary navigation">
-            <a href="index.html">Landing</a>
-            <a href="docs.html">Docs</a>
-            <a href="architecture.html">Architecture</a>
-            <a href="https://github.com/mohamedhossammohamed/zh_catmut" target="_blank" rel="noopener">GitHub</a>
+            <a href="index.html">Home</a>
+<a href="docs.html">Docs</a>
+<a href="architecture.html">Architecture</a>
+<a href="publishing.html">Publishing</a>
+<a href="changelog.html">Changelog</a>
           </nav>
         </div>
       </header>
-
       <main id="main">
         <section class="page-hero">
           <div class="container">
             <div class="reveal">
-              <p class="eyebrow"><span class="eyebrow-dot"></span>Document 03</p>
-              <h1>Performance & Algorithms</h1>
-              <p>Cache-friendly LUT remapping, SIMD direction, and threading plans for massive categorical columns.</p>
+              <p class="eyebrow"><span class="eyebrow-dot"></span>Dense LUT remapping complexity, validation phases, code widths, and cache behavior.</p>
+              <h1>Performance Algorithms</h1>
+            </div>
+            <div class="page-meta reveal">
+              <div class="meta-box"><strong>Version</strong><span>0.2.0 / ABI 2</span></div>
+              <div class="meta-box"><strong>Runtime</strong><span>Python 3.9+, NumPy >= 1.23, Pandas >= 2.0</span></div>
+              <div class="meta-box"><strong>Native core</strong><span>Zig shared library through a C ABI</span></div>
             </div>
           </div>
         </section>
-
         <div class="container docs-layout">
-          <aside class="docs-sidebar reveal" aria-label="Documentation contents">
-            <strong>Contents</strong>
-            <nav>
-              
-            </nav>
-          </aside>
-
-          <article class="doc-article md-article">
-            <h1 id="native-high-performance-algorithms-for-pandas-categorical-mutation-memory-lifecycles-simd-optimization-and-c-abi-safety-boundaries"><strong>Native High-Performance Algorithms for Pandas Categorical Mutation: Memory Lifecycles, SIMD Optimization, and C-ABI Safety Boundaries</strong></h1>
-<h2 id="the-architectural-challenge-of-large-scale-categorical-mutation"><strong>The Architectural Challenge of Large-Scale Categorical Mutation</strong></h2>
-<p>The manipulation of large-scale categorical data within the Python ecosystem frequently encounters severe performance and structural memory bottlenecks when scaled to enterprise dimensions. Specifically, updating, merging, or relabeling categories within a Pandas DataFrame comprising over 100 million rows presents a unique engineering challenge: performing the operation efficiently without triggering memory duplication that doubles the application's memory footprint.<br />
-Categorical data in Pandas is architected to separate the string or object representations from the underlying sequence of values. Internally, the data structure consists of a categories array (an index of unique values) and a highly compressed integer array of codes which serve as pointers to the real values within the categories array.1 A 100-million-row categorical column relies entirely on this underlying integer array. For 32-bit integers, this array consumes approximately 400 megabytes of contiguous memory, and for 64-bit integers, the payload scales to 800 megabytes.1<br />
-When a category merging operation is initiated from the high-level Python API, traditional Python and NumPy execution pipelines invoke allocation patterns that prioritize functional purity and universal type compatibility over memory efficiency. These pipelines trigger intermediate temporary allocations, defensive data copies, and massive boolean mask broadcasting operations that can rapidly exhaust system Random Access Memory (RAM) and trigger Out-Of-Memory (OOM) exceptions.3<br />
-To circumvent the computational limitations of the Python Virtual Machine (VM) and the rigid memory allocation policies of high-level array libraries, performance engineering dictates a transition toward zero-copy Native Interfaces (C-ABI) utilizing low-level, high-performance languages such as C# (specifically via.NET 8 or.NET 9) or Zig. By passing the raw memory pointer of the categorical codes into a native unmanaged environment, it becomes theoretically possible to remap the integers in-place. However, bypassing the Python memory manager introduces profound complexity regarding CPU cache efficiency, Single Instruction Multiple Data (SIMD) utilization, and theoretical boundary safety. Furthermore, mutating data that the Python runtime "owns"—particularly in the context of the strict Copy-on-Write (CoW) semantics introduced in Pandas 3.0 6—requires meticulous management of reference counts, internal object metadata synchronization, and cache invalidation protocols.8<br />
-This technical report delivers an exhaustive analysis of the memory lifecycle, the microarchitectural CPU constraints, the SIMD acceleration strategies available in modern C# and Zig, and the C-ABI safety boundaries necessary to execute in-place categorical mutation at maximum computational efficiency without violating Python's strict memory guarantees.</p>
-<h2 id="the-failure-mechanisms-of-python-based-array-relabeling"><strong>The Failure Mechanisms of Python-Based Array Relabeling</strong></h2>
-<p>Before engineering a native unmanaged extension, it is imperative to dissect the mechanical failures of pure-Python and NumPy-based algorithmic workarounds when applied to datasets exceeding 100 million rows. The standard approaches for fast array relabeling—such as numpy.where, numpy.select, dictionary-based mapping (Series.map), and sequential replace—fail under massive scale due to hidden temporary allocations, sub-optimal memory layouts, and the heavy overhead of the Python execution model.2</p>
-<h3 id="temporary-allocations-and-the-masking-bottleneck"><strong>Temporary Allocations and the Masking Bottleneck</strong></h3>
-<p>The numpy.where(condition, x, y) and numpy.select(condlist, choicelist) functions are heavily optimized C-routines built into the NumPy core; however, their functional paradigms inherently require the instantiation of massive intermediate arrays.11<br />
-When evaluating a conditional statement across 100 million rows (for example, executing the equivalent of df['codes'] \== old_category_code), NumPy evaluates the vectorized comparison and allocates a completely new 100-million-element boolean array.11 A single boolean array of this magnitude consumes roughly 100 megabytes of contiguous memory. If a categorical merge operation involves consolidating 50 distinct legacy categories into 10 new overarching categories, numpy.select requires the generation of a list of boolean conditions. Evaluating 50 conditions across 100 million rows forces the NumPy execution engine to generate 50 distinct 100MB arrays, resulting in a sudden, unavoidable 5-gigabyte memory allocation spike.10<br />
-This temporary memory surge leads to severe computational consequences that cascade throughout the application lifecycle: Firstly, the sudden demand for gigabytes of memory forces the host operating system to swap virtual memory pages to physical disk storage, an operation that decimates throughput and causes system-wide stalling.5 Secondly, the generation of temporary arrays places immense strain on the Python Garbage Collector. Once the temporary boolean arrays are no longer needed for the final selection operation, the Python interpreter must decrement their reference counts and systematically reclaim the memory blocks, leading to unpredictable latency spikes and thread halting.14 Finally, the loss of CPU cache locality acts as a silent performance killer. Generating and sequentially iterating through multiple massive boolean masks evicts highly useful computational data from the CPU's limited L2 and L3 caches, ensuring that all subsequent memory accesses suffer from high-latency DRAM fetches.16<br />
-Furthermore, the final assignment of the results generally allocates an entirely new array to hold the output.4 Even when a developer attempts to utilize the out parameter inherent to many NumPy universal functions (ufuncs) to write directly into a pre-allocated buffer, the intermediate boolean masks required to dictate the conditional logic cannot be avoided through standard high-level API calls.4 Developers profiling this memory overhead can utilize the tracemalloc module, which captures CPU memory allocations placed into the np.lib.tracemalloc_domain by NumPy, explicitly revealing the massive intermediate bloat hidden behind single-line Python operations.19</p>
-<h3 id="dictionary-lookups-and-the-object-boxing-penalty"><strong>Dictionary Lookups and the Object Boxing Penalty</strong></h3>
-<p>An alternative approach frequently employed by data scientists is utilizing Pandas' native .map(dict) or .replace(dict) functionality. While semantically clean and easy to read, these methods fall victim to the highly dynamic, object-oriented nature of the CPython runtime. When a dictionary lookup is applied to a heavily populated NumPy array, the underlying process often forces the contiguous array elements to be unboxed into individual, fully-fledged Python int objects, hashed to find the corresponding dictionary key, and then boxed back into the resulting array format.<br />
-Python integers contain significant metadata that completely destroys memory density. While a standard 32-bit NumPy integer consumes exactly 4 bytes of contiguous space 2, a standard Python int object requires 28 bytes of memory (which includes a 16-byte PyObject header containing reference counts and type pointers, an 8-byte payload value, and 4 bytes dedicated to memory alignment).2 Iterating over 100 million elements in a dictionary mapping loop forces the creation of millions of ephemeral PyObject wrappers. For 100 million integers, this inflates the memory requirement from 400 megabytes to nearly 2.8 gigabytes purely for object representation.2 This object boxing entirely neutralizes the spatial locality benefits of NumPy's contiguous C-array memory layout, turning a linear memory scan into a fragmented pointer-chasing operation that brings modern superscalar CPUs to a crawl.2</p>
-<h3 id="the-inherent-inefficiency-of-in-place-paradigms"><strong>The Inherent Inefficiency of In-Place Paradigms</strong></h3>
-<p>A persistent and common misconception among Python developers is that passing the inplace=True parameter to methods like replace or fillna will natively prevent memory duplication and enforce a zero-copy pipeline.20 In reality, the inplace=True keyword in the Pandas API is largely syntactic sugar designed to suppress assignment boilerplates. For operations that actually modify data values, Pandas frequently computes the result out-of-place in a completely new memory buffer and subsequently updates the original object's internal metadata pointers to reference the newly allocated array, silently discarding the old one to the garbage collector.20<br />
-Due to the persistent developer confusion and the total lack of actual memory or performance benefit, the inplace=True parameter is widely considered an anti-pattern by the core development team.20 In fact, it has been officially deprecated for several Pandas operations under the Pandas Enhancement Proposal 8 (PDEP-8) guidelines, precisely because it obfuscates the true allocation mechanics and frequently breaks method chaining pipelines.22 Because high-level Python abstractions repeatedly fail to deliver genuine zero-copy, in-place array mutation, the engineering solution necessitates crossing the C-ABI boundary into a compiled, unmanaged ecosystem capable of manipulating raw pointers without triggering runtime allocations.</p>
-<h2 id="the-physics-of-memory-lifecycles-and-cpu-bottlenecks"><strong>The Physics of Memory Lifecycles and CPU Bottlenecks</strong></h2>
-<p>Assuming the raw pointer to the 100-million-element codes array is successfully mapped into a native C# or Zig environment via the C-ABI, the operation transitions from being constrained by Python VM overhead to being constrained by bare-metal CPU architecture. Iterating over a contiguous 400MB to 800MB block of memory fundamentally exposes the classic "Von Neumann bottleneck"—the immense physical disparity between the CPU's massive computational speed and the main memory subsystem's high access latency.23</p>
-<h3 id="cpu-cache-hierarchy-and-spatial-locality"><strong>CPU Cache Hierarchy and Spatial Locality</strong></h3>
-<p>Modern high-performance processors rely heavily on a tiered cache hierarchy (Level 1, Level 2, and Level 3) to hide the extreme latency of main memory (DRAM). A typical CPU reads data from DRAM not in single bytes, but in fixed 64-byte chunks known as cache lines.2 A standard 64-byte cache line can hold exactly sixteen 32-bit integers or eight 64-bit integers.<br />
-When a native loop reads the first integer of the codes array, a cache miss inevitably occurs, forcing the CPU to fetch the 64-byte block from main DRAM. However, due to the principle of spatial locality, the next 15 integers are pulled simultaneously and are thus already present in the ultra-fast L1 cache for the subsequent loop iterations.2 Furthermore, sequential iteration over an array is highly predictable. This predictability allows the CPU's hardware prefetcher to detect the linear access pattern and proactively load subsequent cache lines into the L2 and L3 caches long before the loop actually requests them.26<br />
-The critical nature of this hierarchy is illustrated by the vast differences in access latency and bandwidth across the memory tiers.</p>
-<table>
-<thead>
-<tr>
-<th style="text-align: left;">Memory Tier</th>
-<th style="text-align: left;">Typical Capacity</th>
-<th style="text-align: left;">Access Latency</th>
-<th style="text-align: left;">Bandwidth</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td style="text-align: left;"><strong>Level 1 (L1) Cache</strong></td>
-<td style="text-align: left;">32 KB - 64 KB</td>
-<td style="text-align: left;">\~1 - 2 ns</td>
-<td style="text-align: left;">\~1000 GB/s</td>
-</tr>
-<tr>
-<td style="text-align: left;"><strong>Level 2 (L2) Cache</strong></td>
-<td style="text-align: left;">256 KB - 2 MB</td>
-<td style="text-align: left;">\~3 - 10 ns</td>
-<td style="text-align: left;">\~500 GB/s</td>
-</tr>
-<tr>
-<td style="text-align: left;"><strong>Level 3 (L3) Cache (Shared)</strong></td>
-<td style="text-align: left;">8 MB - 64 MB</td>
-<td style="text-align: left;">\~10 - 20 ns</td>
-<td style="text-align: left;">\~200 GB/s</td>
-</tr>
-<tr>
-<td style="text-align: left;"><strong>Main Memory (DRAM)</strong></td>
-<td style="text-align: left;">16 GB+</td>
-<td style="text-align: left;">\~60 - 100 ns</td>
-<td style="text-align: left;">\~50 GB/s</td>
-</tr>
-</tbody>
-</table>
-<h3 id="the-lookup-table-lut-cache-dilemma"><strong>The Lookup Table (LUT) Cache Dilemma</strong></h3>
-<p>While sequentially reading the 100 million integers from the codes array is exceptionally fast due to hardware prefetching, the actual mutation process requires translating an old category integer code to a new category integer code using a mapping structure, typically a Lookup Table (LUT).23 The memory access pattern of this LUT strictly dictates the ultimate execution speed of the native extension.<br />
-If the total number of unique categories is small (for example, 256 distinct categories), the LUT can be constructed as a simple 256-element array. A 256-element array of 32-bit integers consumes exactly 1024 bytes (1 KB) of memory. This tiny payload easily fits entirely within the L1 cache.25 In this highly optimal scenario, iterating over the massive codes array and using each value as a direct index into the LUT incurs almost zero latency, as both the incoming data stream and the mapping dictionary reside in the fastest memory structures physically available on the silicon.<br />
-However, if the DataFrame contains hundreds of thousands of distinct categories, the LUT will grow to encompass several megabytes, eventually exceeding the capacity of the L1 and L2 caches.25 Because the codes array may contain integers representing categories in a completely random order, accessing a large LUT results in highly random, unpredictable memory access patterns.29 The hardware prefetcher, which excels at linear patterns, is completely incapable of anticipating which LUT element will be needed next. Every time an integer maps to a LUT entry that is not currently resident in the L1 or L2 cache, a severe cache miss occurs. This miss forces the CPU's execution pipeline to stall for up to 100 nanoseconds while it issues a fetch command to DRAM.16 Scaled over 100 million rows, these nanosecond stalls rapidly compound into multiple seconds of blocked execution time, neutralizing the primary benefit of native speeds.</p>
-<h3 id="software-prefetching-and-cache-aware-algorithms"><strong>Software Prefetching and Cache-Aware Algorithms</strong></h3>
-<p>To mitigate the devastating latency of unpredictable LUT accesses across massive category sets, native implementations must employ sophisticated software prefetching techniques.26 Software prefetching involves issuing explicit compiler intrinsics (such as __builtin_prefetch in Zig/C) to instruct the CPU to load a specific memory address into the cache hierarchy several loop iterations before the data is actually needed by the arithmetic logic unit.27<br />
-For a categorical remapping algorithm, an unrolled execution loop can read an integer code from the codes array, issue a non-blocking prefetch command for the memory address of the corresponding LUT entry, and simultaneously perform the actual value replacement for an element that was fetched several cycles earlier.26 This creates a pipeline of memory requests that overlap with execution. The theoretical distance ahead that the algorithm must prefetch is calculated based on the hardware's miss penalty. If the L3 cache miss penalty is approximately 60 cycles and a single loop iteration requires 5 cycles to execute, the native algorithm must prefetch the LUT address roughly 12 elements ahead to ensure the data arrives precisely when required.26<br />
-While explicit software prefetching adds instruction overhead to the loop, actively hiding the DRAM latency of random LUT access is fundamentally crucial for achieving maximum throughput on highly fragmented category mappings.30 This contrasts with cache-oblivious algorithms, which rely on recursive divide-and-conquer methodologies to naturally fit workloads into unknown cache sizes without explicit tuning.32 For a direct array relabeling task, a cache-aware approach tailored to the specific line sizes and prefetch distances of the target architecture yields significantly higher throughput.</p>
-<h2 id="simd-instructions-and-tiled-array-relabeling-in-c-and-zig"><strong>SIMD Instructions and Tiled Array Relabeling in C# and Zig</strong></h2>
-<p>To push processing performance beyond the architectural limits of scalar execution, the native extension must heavily utilize Single Instruction, Multiple Data (SIMD) capabilities alongside parallel threading paradigms.</p>
-<h3 id="simd-fundamentals-and-hardware-intrinsics"><strong>SIMD Fundamentals and Hardware Intrinsics</strong></h3>
-<p>SIMD architectures—such as AVX2 (256-bit) or AVX-512 (512-bit) on modern x86/x64 systems, and Advanced SIMD (NEON) on ARM processors—allow a single CPU instruction to operate on multiple independent data points simultaneously.35 In recent years, high-level languages have dramatically improved their low-level hardware access. In.NET 8 and.NET 9, Microsoft introduced robust, cross-platform hardware intrinsics, exposing Vector256\&lt;T&gt; and the new Vector512\&lt;T&gt; types, providing direct C# access to massive AVX-512 instructions without requiring inline assembly.38<br />
-Zig similarly provides first-class, compiler-level support for SIMD through its @Vector built-in types. This enables compile-time vector sizing and seamless, platform-agnostic generation of underlying LLVM vector instructions.36 Zig's architecture ensures that operations applied to @Vector instances are automatically parallelized across the CPU's execution units.<br />
-Vectorizing a standard array transformation conceptually involves loading a continuous chunk of memory (for example, loading eight 32-bit integers into a single 256-bit vector register), mapping them to new values in parallel, and writing the entire vector back to RAM in one cycle.2 However, vectorizing a <em>lookup table substitution</em> introduces significant microarchitectural roadblocks.</p>
-<h3 id="the-gather-vs-shuffle-paradox"><strong>The Gather vs. Shuffle Paradox</strong></h3>
-<p>If the categorical LUT is large and must be stored in main memory, retrieving multiple random values simultaneously to populate a vector register requires a "gather" instruction (e.g., vgatherdps in AVX2).44 Gather instructions are designed to take a vector of base memory addresses and a vector of offsets, subsequently returning a vector containing the requested values.44 However, historically, gather instructions are implemented in processor hardware as a highly complex sequence of micro-ops that fetch the memory addresses sequentially rather than truly in parallel. Consequently, gather instructions are exceptionally slow, suffering from high latency, and routinely fail to provide meaningful speedups over a well-optimized, unrolled scalar loop.46<br />
-A vastly superior SIMD strategy for categorical remapping relies on the use of vector <strong>shuffle</strong> or <strong>permute</strong> instructions (such as pshufb in SSE/AVX hardware, or C#'s Vector256.Shuffle).47 Instead of storing the LUT in main memory and suffering gather latencies, a small LUT is loaded directly into an active SIMD vector register.47<br />
-If the categorical mapping rules are highly compressed (for instance, mapping a small set of localized integers to new values), the CPU can use the target codes vector as an index mask to shuffle the pre-loaded LUT vector in a single CPU cycle.47 In Zig, this is achieved using the powerful @shuffle intrinsic, which dynamically routes values between vectors based on a runtime mask.49 In C#.NET 9, methods like Vector512.Shuffle execute parallel permutations across 64-byte boundaries virtually instantaneously.41<br />
-If the total number of categories exceeds the capacity of a single SIMD register, the native algorithm can employ a cascade pattern of SIMD compare, blend, and shuffle instructions to process mid-sized LUTs entirely within the CPU's register file, completely bypassing the L1 cache lookup overhead that plagues scalar execution.51</p>
-<table>
-<thead>
-<tr>
-<th style="text-align: left;">SIMD Optimization Strategy</th>
-<th style="text-align: left;">Hardware Mechanism</th>
-<th style="text-align: left;">Implementation (C#/Zig)</th>
-<th style="text-align: left;">Performance Profile</th>
-<th style="text-align: left;">Ideal Use Case</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td style="text-align: left;"><strong>Scalar LUT Mapping</strong></td>
-<td style="text-align: left;">L1/L2 Cache hit</td>
-<td style="text-align: left;">Array indexing LUT[x]</td>
-<td style="text-align: left;">Moderate throughput, highly vulnerable to cache misses.</td>
-<td style="text-align: left;">Large, unpredictable category sets.</td>
-</tr>
-<tr>
-<td style="text-align: left;"><strong>Gather SIMD</strong></td>
-<td style="text-align: left;">vgather micro-ops</td>
-<td style="text-align: left;">Platform specific Intrinsics</td>
-<td style="text-align: left;">High latency, often slower than optimized scalar loops.</td>
-<td style="text-align: left;">Rarely recommended.</td>
-</tr>
-<tr>
-<td style="text-align: left;"><strong>Shuffle SIMD / Permute</strong></td>
-<td style="text-align: left;">pshufb / Permute</td>
-<td style="text-align: left;">Vector256.Shuffle / @shuffle</td>
-<td style="text-align: left;">Ultra-low latency, executed in a single cycle entirely in registers.</td>
-<td style="text-align: left;">Small, localized categories fitting strictly within vector bounds.</td>
-</tr>
-</tbody>
-</table>
-<h3 id="multi-threading-and-false-sharing-mitigation"><strong>Multi-Threading and False Sharing Mitigation</strong></h3>
-<p>Processing an array of 100 million integers is an embarrassingly parallel task. Dividing the 400MB continuous block into distinct, equal chunks and assigning them to multiple CPU cores via C#'s Parallel.For or Zig's lightweight thread pools will theoretically yield linear speedups bounded strictly by the machine's overall memory bandwidth limit.53<br />
-However, when engineering this parallelization, the native developer must be heavily vigilant against <strong>False Sharing</strong>. False sharing occurs when two or more concurrent threads happen to mutate independent integers that physically reside on the exact same 64-byte cache line in memory. Even though the threads are modifying different data points, the CPU's cache coherency protocol cannot distinguish at the sub-line level. It will forcefully and repeatedly invalidate the entire cache line across the independent L1 caches of the respective cores, forcing them to continuously fetch the cache line from each other via the ring bus or L3 cache, severely stalling execution.16 To utterly eliminate false sharing, the logical division of the codes array must ensure that each thread's memory chunk strictly aligns to 64-byte boundaries, or ideally, 4096-byte OS page boundaries, ensuring absolute hardware isolation.54</p>
-<h2 id="c-abi-boundary-mapping-and-theoretical-memory-safety"><strong>C-ABI Boundary Mapping and Theoretical Memory Safety</strong></h2>
-<p>Crossing the C-Application Binary Interface (C-ABI) boundary from the Python runtime into a compiled native environment requires accurately translating high-level Python objects (PyObject) into low-level memory pointers.55 When utilizing zero-copy interoperability to avoid OOM errors, the native environment absolutely must not copy the 100 million integers; it receives a raw, direct pointer to the memory address managed and allocated by the Python memory manager.57</p>
-<h3 id="numpy-array-architecture-and-the-writeable-flag"><strong>NumPy Array Architecture and the Writeable Flag</strong></h3>
-<p>In the Python ecosystem, the Pandas categorical codes array is ultimately backed by a NumPy ndarray. At the C-ABI level, a NumPy array is represented by a robust C-structure (PyArrayObject) which contains critical metadata such as the array's dimensionality (ndim), memory step sizes (strides), overall dimensions (shape), and the vital data pointer pointing to the raw payload.57 The raw memory buffer itself can be accessed via standardized macros such as PyArray_DATA(arr).55<br />
-Before recklessly mutating the array in-place, the native code must rigorously respect the safety constraints enforced by NumPy's internal flag system. Every NumPy array possesses an integer bitfield representing its current operational state, accessible via the PyArray_FLAGS(arr) macro.55 The most critical flag governing in-place mutation is the NPY_ARRAY_WRITEABLE flag.60<br />
-If the NPY_ARRAY_WRITEABLE flag is not set, the array is strictly considered read-only by the ecosystem. Pandas intentionally sets the categorical codes array to read-only (writeable=False) at the Python level upon creation to prevent end-users from arbitrarily changing the underlying integers, which would fatally corrupt the internal mapping to the categories array.9 In the wild west of the C-ABI, an engineer could theoretically forcefully clear or set this flag using PyArray_ENABLEFLAGS(arr, NPY_ARRAY_WRITEABLE).55 However, forcibly overriding write protection on memory that might be mapped to a read-only file on disk, or memory shared across critical execution contexts, can trigger immediate OS-level bus errors, segmentation faults, or severe silent data corruption.60 The optimal, safe approach requires the native extension to verify the memory's true ownership status—specifically checking the OWNDATA flag—to ensure the pointer passed is actually backed by volatile, uniquely owned RAM before modification.19</p>
-<h3 id="reference-counting-and-free-threaded-hazards"><strong>Reference Counting and Free-Threaded Hazards</strong></h3>
-<p>The overarching safety of mutating data that Python legally "owns" relies on guaranteeing that no other Python variables currently expect the data to remain static. The Python C-API provides the Py_REFCNT(PyObject *o) macro to quickly query exactly how many active references currently point to an object.15<br />
-Historically, in single-threaded Python scripts, if Py_REFCNT \== 1, the object was known to be uniquely referenced, and in-place mutation was deemed logically safe.15 However, the landscape has fundamentally shifted. As of Python 3.13 and the highly anticipated introduction of free-threaded (GIL-less) Python builds, the Py_REFCNT value is no longer a reliable or sufficient indicator of thread safety. Due to the introduction of immortal objects and concurrent multi-thread access without a Global Interpreter Lock, a reference count of 1 is totally insufficient to guarantee unique ownership across cores.15 Native extensions targeting modern, scalable Python must utilize the new PyUnstable_Object_IsUniquelyReferenced() API, or rely on strict architectural guarantees (such as exclusive lock scoping), before allowing the multi-threaded SIMD loop to unleash upon the data block.15</p>
-<h2 id="overcoming-pandas-copy-on-write-cow-and-cache-invalidation"><strong>Overcoming Pandas Copy-on-Write (CoW) and Cache Invalidation</strong></h2>
-<p>Even if the native C# or Zig environment flawlessly processes the integer array using multi-threaded AVX-512 instructions, and safely navigates the NumPy C-ABI flags without causing a segmentation fault, the architecture will face critical logical failures upon returning execution back to Python. This failure is entirely due to Pandas' internal state management, specifically the stringent Copy-on-Write (CoW) system and the internal mechanics of the BlockManager.64</p>
-<h3 id="the-copy-on-write-cow-trap"><strong>The Copy-on-Write (CoW) Trap</strong></h3>
-<p>As of the Pandas 3.0 release, Copy-on-Write is the default and only operational mode allowed by the library.6 CoW fundamentally and permanently alters how Pandas handles memory sharing. Under the hood, Pandas tracks data sharing using an internal component called the BlockManager, which groups columns of similar data types into dense two-dimensional blocks to optimize memory layout.66 Over time, these blocks can become fragmented, requiring operations like _consolidate to realign memory.67 To track references to these blocks safely, Pandas utilizes a custom reference tracker object called BlockValuesRefs.8<br />
-When a user subsets a DataFrame (for example, executing df2 \= df[['categorical_column']]), Pandas creates a highly efficient shallow copy. It does not duplicate the 400MB memory block. Instead, both df and df2 point to the exact same physical memory, and the BlockValuesRefs object creates a weak reference pointing to both blocks, keeping a continuous, live tally of exactly how many DataFrames currently share the underlying array.8<br />
-Under normal, Python-based CoW rules, if a user attempts to write new data to df2, Pandas intercepts the assignment and queries the BlockValuesRefs object. If the tracker reports that df is also alive and sharing the memory, Pandas triggers a defensive copy, transparently allocating a completely new array <em>before</em> applying the write.3 This guarantees that modifying df2 does not accidentally and disastrously corrupt the data within df.7<br />
-<strong>The Native Interoperability Danger:</strong> When a native C#/Zig extension receives the raw memory pointer via the C-ABI and mutates the array <em>in-place</em>, it completely bypasses the Python-level BlockValuesRefs check. The native code effectively modifies the shared memory blindly, circumventing all Python safeguards.9 Consequently, if df and df2 shared the categorical column, mutating the array in C# will instantly and silently mutate <em>both</em> DataFrames back in Python. This completely violates the core API contract and mathematical guarantees of Pandas 3.0 CoW semantics.6</p>
-<h3 id="designing-a-cow-compliant-native-handoff"><strong>Designing a CoW-Compliant Native Handoff</strong></h3>
-<p>To maintain absolute safety constraints, the native extension must be engineered to respect CoW semantics implicitly. This can be achieved through two distinct architectural pathways upon returning the state back to the Python environment:<br />
-<strong>Pathway A: The Defensive Pre-Check via Python ABI</strong> Before the native extension commits to processing the pointer, it can utilize the C-API to call back into the Python runtime and query the reference tracking object directly.8 If BlockValuesRefs indicates shared ownership among multiple DataFrames, the native extension can proactively request NumPy to allocate a contiguous block of empty memory (PyDataMem_NEW), perform the SIMD mutation out-of-place into this new buffer, and return the newly generated array to Python.57 While this temporarily doubles the memory footprint for shared data, it perfectly honors CoW requirements. If the block is strictly unique, it executes the in-place zero-copy pipeline without hesitation.<br />
-<strong>Pathway B: The Zero-Copy Reattachment and from_codes Constructor</strong> If the extension aggressively performs in-place mutation assuming unique ownership, it must gracefully signal to the Pandas engine that the categories have been fundamentally updated. Because Pandas internally caches object representations, string representations, and categorical mappings to speed up operations 71, a raw, blind mutation of the underlying NumPy array leaves Pandas' internal metadata hopelessly unsynchronized and stale.<br />
-The safest, zero-copy method to reintegrate the mutated array is to forcefully utilize the pandas.Categorical.from_codes API.1 The from_codes constructor is explicitly designed for high-performance scenarios to instantiate a categorical type when the user already possesses the raw code array and the target categories.<br />
-The pipeline proceeds as follows:</p>
-<ol>
-<li>The native extension aggressively processes the codes array in-place using SIMD instructions.  </li>
-<li>The extension completes execution and passes the same raw array back to the Python caller.  </li>
-<li>Python wraps the array using the explicit command: pd.Categorical.from_codes(mutated_array, categories=new_categories, validate=False). By crucially setting validate=False, Pandas completely bypasses the computationally intensive factorization and validation step, trusting the native engine to output perfectly valid codes without causing out-of-bounds segfaults.1  </li>
-<li>This newly minted categorical object is reassigned to the DataFrame column via standard assignment: df['categorical_column'] \= new_categorical.</li>
-</ol>
-<p>Under CoW semantics, this simple reassignment cleanly breaks the reference to any previous state without forcing a copy of the 400MB payload, perfectly satisfying both the Python VM memory manager and the Pandas internal BlockManager simultaneously.3</p>
-<h3 id="internal-metadata-and-cache-invalidation"><strong>Internal Metadata and Cache Invalidation</strong></h3>
-<p>If developers stubbornly attempt to force the state update on an existing categorical object in-place without using the reassignment technique, they must contend with a myriad of undocumented internal methods, such as _set_categories, and severe _clear_cache mechanics.62 Pandas Series and Categorical objects utilize deep internal caches (often decorated with @cache_readonly) to permanently store computed dimensions, memory sizes, and factorization mappings.73<br />
-When a native extension alters the underlying codes and the categories mapping without warning, these cached properties become completely stale, returning incorrect data dimensions to subsequent analytical operations. Relying on API methods like remove_unused_categories(inplace=True) 76 or relying on direct, unauthorized attribute manipulation causes severe, untraceable synchronization errors. Therefore, leveraging from_codes to construct an entirely new object shell around the existing, safely mutated memory buffer remains the architecturally superior, mathematically robust solution to preventing metadata corruption and invalidating stale caches implicitly.72</p>
-<h2 id="strategic-synthesis-and-engineering-recommendations"><strong>Strategic Synthesis and Engineering Recommendations</strong></h2>
-<p>Designing a native C# or Zig extension to resolve the Pandas categorical mutation bottleneck relies on an exceptionally meticulous balance of raw microarchitectural CPU optimization and high-level Python runtime awareness. The standard Python execution model—plagued by temporary boolean mask allocations, high-latency object boxing, and massive memory spikes dictated by numpy.where—is structurally incapable of relabeling 100-million-row categories efficiently without causing OOM crashes.<br />
-Transitioning the operation to an unmanaged native environment removes the Python interpreter's overhead entirely, exposing the raw, contiguous memory to the CPU. The native algorithm must subsequently mitigate the Von Neumann bottleneck. If categorical mappings are vast, the resulting random lookup table (LUT) access causes disastrous L1/L2 cache eviction. Implementing intelligent software prefetching (__builtin_prefetch) helps hide main DRAM latency, while shrinking smaller LUTs to fit entirely inside CPU vector registers unlocks ultra-low latency execution via SIMD shuffle intrinsics (like Vector512.Shuffle in C#.NET 9 or @shuffle in Zig). Parallelizing this execution across multi-core architectures provides nearly linear performance scaling, provided the memory is chunked along exact OS page boundaries to ruthlessly eliminate the threat of false sharing.<br />
-However, raw computational speed is utterly useless if it violates system safety constraints. Crossing the C-ABI requires a rigorous evaluation of NPY_ARRAY_WRITEABLE flags and dynamic reference tracking protocols to prevent segment faults and free-threading lock collisions in modern Python environments. More importantly, aggressive in-place mutation fundamentally breaks the Copy-on-Write (CoW) paradigms enforced by Pandas 3.0. To execute a true zero-copy operation while maintaining state safety across the Python application, the native engine should mutate the raw integers responsibly, bypass Pandas' weak reference tracking only after ensuring unique ownership, and orchestrate a zero-copy reattachment utilizing pd.Categorical.from_codes(validate=False). This holistic, architecturally rigorous approach successfully aligns the bare-metal performance of SIMD hardware with the memory-safe, immutable architecture of the modern Python data science ecosystem.</p>
-<h4 id="works-cited"><strong>Works cited</strong></h4>
-<ol>
-<li>Categorical data — pandas 3.0.2 documentation - PyData |, accessed on May 7, 2026, <a href="https://pandas.pydata.org/docs/user_guide/categorical.html">https://pandas.pydata.org/docs/user_guide/categorical.html</a>  </li>
-<li>Why NumPy Crunches Numbers Faster and Saves Memory: A Guide for Python Developers | by Darshan Tank | Medium, accessed on May 7, 2026, <a href="https://medium.com/@darshantank_55417/why-numpy-crunches-numbers-faster-and-saves-memory-a-guide-for-python-developers-313ebcb9df43">https://medium.com/@darshantank_55417/why-numpy-crunches-numbers-faster-and-saves-memory-a-guide-for-python-developers-313ebcb9df43</a>  </li>
-<li>Deep Dive into pandas Copy-on-Write Mode - Part II | Patrick Hoefler, accessed on May 7, 2026, <a href="https://phofl.github.io/cow-deep-dive-optimizations.html">https://phofl.github.io/cow-deep-dive-optimizations.html</a>  </li>
-<li>Understanding memory allocation in numpy: Is "temporary" memory being allocated when storing the result of an operation into variable[:, :]? - Stack Overflow, accessed on May 7, 2026, <a href="https://stackoverflow.com/questions/53268723/understanding-memory-allocation-in-numpy-is-temporary-memory-being-allocated">https://stackoverflow.com/questions/53268723/understanding-memory-allocation-in-numpy-is-temporary-memory-being-allocated</a>  </li>
-<li>Tips to Avoid memory Error in Very Large Dataset - GeeksforGeeks, accessed on May 7, 2026, <a href="https://www.geeksforgeeks.org/numpy/tips-to-avoid-memory-error-in-very-large-dataset/">https://www.geeksforgeeks.org/numpy/tips-to-avoid-memory-error-in-very-large-dataset/</a>  </li>
-<li>Pandas 3.0's Biggest Shift: Copy-on-Write Becomes the Only Mode - Medium, accessed on May 7, 2026, <a href="https://medium.com/@sathishdba/pandas-3-0s-biggest-shift-copy-on-write-becomes-the-only-mode-87a1870a144f">https://medium.com/@sathishdba/pandas-3-0s-biggest-shift-copy-on-write-becomes-the-only-mode-87a1870a144f</a>  </li>
-<li>Copy-on-Write (CoW) — pandas 3.0.2 documentation - PyData |, accessed on May 7, 2026, <a href="https://pandas.pydata.org/docs/user_guide/copy_on_write.html">https://pandas.pydata.org/docs/user_guide/copy_on_write.html</a>  </li>
-<li>Copy on write — pandas 3.0.2 documentation - PyData |, accessed on May 7, 2026, <a href="https://pandas.pydata.org/docs/development/copy_on_write.html">https://pandas.pydata.org/docs/development/copy_on_write.html</a>  </li>
-<li>Migration Guides — pandas documentation - PyData |, accessed on May 7, 2026, <a href="http://pandas.pydata.org/docs/user_guide/migration.html">http://pandas.pydata.org/docs/user_guide/migration.html</a>  </li>
-<li>The Difference Between Where and Select Functions of Python NumPy, accessed on May 7, 2026, <a href="https://towardsdatascience.com/the-difference-between-where-and-select-functions-of-python-numpy-9c81273ed5fb/">https://towardsdatascience.com/the-difference-between-where-and-select-functions-of-python-numpy-9c81273ed5fb/</a>  </li>
-<li>Demystifying np.where and np.select | by Siddharth Kshirsagar | Analytics Vidhya - Medium, accessed on May 7, 2026, <a href="https://medium.com/analytics-vidhya/demystifying-np-where-and-np-select-76e3ca49e316">https://medium.com/analytics-vidhya/demystifying-np-where-and-np-select-76e3ca49e316</a>  </li>
-<li>More memory efficient option than numpy.where? - Stack Overflow, accessed on May 7, 2026, <a href="https://stackoverflow.com/questions/54909182/more-memory-efficient-option-than-numpy-where">https://stackoverflow.com/questions/54909182/more-memory-efficient-option-than-numpy-where</a>  </li>
-<li>python - Numpy concatenation 3D array - Out of Memory - Bigger dataset - Stack Overflow, accessed on May 7, 2026, <a href="https://stackoverflow.com/questions/62305801/numpy-concatenation-3d-array-out-of-memory-bigger-dataset">https://stackoverflow.com/questions/62305801/numpy-concatenation-3d-array-out-of-memory-bigger-dataset</a>  </li>
-<li>Understand memory allocation for python numpy array - Stack Overflow, accessed on May 7, 2026, <a href="https://stackoverflow.com/questions/51354170/understand-memory-allocation-for-python-numpy-array">https://stackoverflow.com/questions/51354170/understand-memory-allocation-for-python-numpy-array</a>  </li>
-<li>Reference Counting — Python 3.14.5rc1 documentation, accessed on May 7, 2026, <a href="https://docs.python.org/3/c-api/refcounting.html">https://docs.python.org/3/c-api/refcounting.html</a>  </li>
-<li>Cache Memories, Cache Complexity - Computer Science, UWO, accessed on May 7, 2026, <a href="https://www.csd.uwo.ca/~mmorenom/HPC-Slides/Cache_Complexity.pdf">https://www.csd.uwo.ca/\~mmorenom/HPC-Slides/Cache_Complexity.pdf</a>  </li>
-<li>Optimizing Memory Layouts: Avoiding Cache Misses with NumPy Strides | by Thinking Loop, accessed on May 7, 2026, <a href="https://medium.com/@ThinkingLoop/optimizing-memory-layouts-avoiding-cache-misses-with-numpy-strides-ca86c9c3a8a7">https://medium.com/@ThinkingLoop/optimizing-memory-layouts-avoiding-cache-misses-with-numpy-strides-ca86c9c3a8a7</a>  </li>
-<li>memory allocation w.r.t. large and often used numpy arrays : r/learnpython - Reddit, accessed on May 7, 2026, <a href="https://www.reddit.com/r/learnpython/comments/u71cwt/memory_allocation_wrt_large_and_often_used_numpy/">https://www.reddit.com/r/learnpython/comments/u71cwt/memory_allocation_wrt_large_and_often_used_numpy/</a>  </li>
-<li>Memory management in NumPy, accessed on May 7, 2026, <a href="https://numpy.org/doc/2.1/reference/c-api/data_memory.html">https://numpy.org/doc/2.1/reference/c-api/data_memory.html</a>  </li>
-<li>In pandas, is inplace \= True considered harmful, or not? - Stack Overflow, accessed on May 7, 2026, <a href="https://stackoverflow.com/questions/45570984/in-pandas-is-inplace-true-considered-harmful-or-not">https://stackoverflow.com/questions/45570984/in-pandas-is-inplace-true-considered-harmful-or-not</a>  </li>
-<li>A Simple Guide to Inplace Operations in Pandas | by Avi Chawla | TDS Archive - Medium, accessed on May 7, 2026, <a href="https://medium.com/data-science/a-simple-guide-to-inplace-operations-in-pandas-7a1d97ecce24">https://medium.com/data-science/a-simple-guide-to-inplace-operations-in-pandas-7a1d97ecce24</a>  </li>
-<li>PDEP-8: In-place methods in pandas, accessed on May 7, 2026, <a href="https://pandas.pydata.org/pdeps/0008-inplace-methods-in-pandas.html">https://pandas.pydata.org/pdeps/0008-inplace-methods-in-pandas.html</a>  </li>
-<li>Look-Up Table based Energy Efficient Processing in Cache Support for Neural Network Acceleration, accessed on May 7, 2026, <a href="https://microarch.org/micro53/papers/738300a088.pdf">https://microarch.org/micro53/papers/738300a088.pdf</a>  </li>
-<li>Efficient Cache Architecture for Table Lookups in an Internet Router - The Science and Information (SAI) Organization, accessed on May 7, 2026, <a href="https://thesai.org/Downloads/Volume11No5/Paper_81-Efficient_Cache_Architecture_for_Table_Lookups.pdf">https://thesai.org/Downloads/Volume11No5/Paper_81-Efficient_Cache_Architecture_for_Table_Lookups.pdf</a>  </li>
-<li>You (Probably) Shouldn't use a Lookup Table | Speculative Branches, accessed on May 7, 2026, <a href="https://specbranch.com/posts/lookup-tables/">https://specbranch.com/posts/lookup-tables/</a>  </li>
-<li>Cache prefetching - Wikipedia, accessed on May 7, 2026, <a href="https://en.wikipedia.org/wiki/Cache_prefetching">https://en.wikipedia.org/wiki/Cache_prefetching</a>  </li>
-<li>Prefetching - Algorithmica, accessed on May 7, 2026, <a href="https://en.algorithmica.org/hpc/cpu-cache/prefetching/">https://en.algorithmica.org/hpc/cpu-cache/prefetching/</a>  </li>
-<li>Lookup Tables Are Bad Approximators | by Jatin Chowdhury - Medium, accessed on May 7, 2026, <a href="https://jatinchowdhury18.medium.com/lookup-tables-are-bad-approximators-6e4a712b912e">https://jatinchowdhury18.medium.com/lookup-tables-are-bad-approximators-6e4a712b912e</a>  </li>
-<li>RecFlash: Fast Recommendation System on In-Storage Computing with Frequency-Based Data Mapping - arXiv, accessed on May 7, 2026, <a href="https://arxiv.org/html/2604.25338v1">https://arxiv.org/html/2604.25338v1</a>  </li>
-<li>The pros and cons of explicit software prefetching, accessed on May 7, 2026, <a href="https://johnnysswlab.com/the-pros-and-cons-of-explicit-software-prefetching/">https://johnnysswlab.com/the-pros-and-cons-of-explicit-software-prefetching/</a>  </li>
-<li>Fetch Me If You Can: Evaluating CPU Cache Prefetching and Its Reliability on High Latency Memory, accessed on May 7, 2026, <a href="https://hpi.de/oldsite/fileadmin/user_upload/fachgebiete/rabl/publications/2025/Mahling-DaMoN25-Prefetching.pdf">https://hpi.de/oldsite/fileadmin/user_upload/fachgebiete/rabl/publications/2025/Mahling-DaMoN25-Prefetching.pdf</a>  </li>
-<li>Cache-oblivious algorithm - Wikipedia, accessed on May 7, 2026, <a href="https://en.wikipedia.org/wiki/Cache-oblivious_algorithm">https://en.wikipedia.org/wiki/Cache-oblivious_algorithm</a>  </li>
-<li>Cache-Oblivious Algorithms, accessed on May 7, 2026, <a href="https://ocw.mit.edu/courses/6-895-theory-of-parallel-systems-sma-5509-fall-2003/6dc7de52dcf13b53cebf2fe10ae6752a_cach_oblvs_thsis.pdf">https://ocw.mit.edu/courses/6-895-theory-of-parallel-systems-sma-5509-fall-2003/6dc7de52dcf13b53cebf2fe10ae6752a_cach_oblvs_thsis.pdf</a>  </li>
-<li>Cache-Aware Analysis of Algorithms 1 Ideal Cache Model CPU$ Slow$ Memory$, accessed on May 7, 2026, <a href="https://www.cse.wustl.edu/~angelee/archive/cse341/fall14/handouts/lecture23.pdf">https://www.cse.wustl.edu/\~angelee/archive/cse341/fall14/handouts/lecture23.pdf</a>  </li>
-<li>fsprojects/SIMDArray: SIMD enhanced Array operations - GitHub, accessed on May 7, 2026, <a href="https://github.com/fsprojects/SIMDArray">https://github.com/fsprojects/SIMDArray</a>  </li>
-<li>17 Introducing Vectors and SIMD – Introduction to Zig, accessed on May 7, 2026, <a href="https://pedropark99.github.io/zig-book/Chapters/15-vectors.html">https://pedropark99.github.io/zig-book/Chapters/15-vectors.html</a>  </li>
-<li>SimdBench: Benchmarking Large Language Models for SIMD-Intrinsic Code Generation - arXiv, accessed on May 7, 2026, <a href="https://arxiv.org/pdf/2507.15224">https://arxiv.org/pdf/2507.15224</a>  </li>
-<li>Performance Improvements in .NET 8 - Microsoft Developer Blogs, accessed on May 7, 2026, <a href="https://devblogs.microsoft.com/dotnet/performance-improvements-in-net-8/">https://devblogs.microsoft.com/dotnet/performance-improvements-in-net-8/</a>  </li>
-<li>Expose cross-platform helpers for Vector64, Vector128, and Vector256 · Issue #49397 · dotnet/runtime - GitHub, accessed on May 7, 2026, <a href="https://github.com/dotnet/runtime/issues/49397">https://github.com/dotnet/runtime/issues/49397</a>  </li>
-<li>Hardware Intrinsics in .NET 8 - Microsoft Developer Blogs, accessed on May 7, 2026, <a href="https://devblogs.microsoft.com/dotnet/dotnet-8-hardware-intrinsics/">https://devblogs.microsoft.com/dotnet/dotnet-8-hardware-intrinsics/</a>  </li>
-<li>Performance Improvements in .NET 9 - Microsoft Developer Blogs, accessed on May 7, 2026, <a href="https://devblogs.microsoft.com/dotnet/performance-improvements-in-net-9/">https://devblogs.microsoft.com/dotnet/performance-improvements-in-net-9/</a>  </li>
-<li>SIMD with Zig, accessed on May 7, 2026, <a href="https://www.openmymind.net/SIMD-With-Zig/">https://www.openmymind.net/SIMD-With-Zig/</a>  </li>
-<li>RFC: SIMD spec #9389 - ziglang/zig - GitHub, accessed on May 7, 2026, <a href="https://github.com/ziglang/zig/issues/9389">https://github.com/ziglang/zig/issues/9389</a>  </li>
-<li>US20170046156A1 - Table lookup using simd instructions - Google Patents, accessed on May 7, 2026, <a href="https://patents.google.com/patent/US20170046156A1/en">https://patents.google.com/patent/US20170046156A1/en</a>  </li>
-<li>Scatter, gather, reduce w/ @Vector - Brainstorming - Ziggit, accessed on May 7, 2026, <a href="https://ziggit.dev/t/scatter-gather-reduce-w-vector/1782">https://ziggit.dev/t/scatter-gather-reduce-w-vector/1782</a>  </li>
-<li>You probably shouldn't use a lookup table (2022) | Hacker News, accessed on May 7, 2026, <a href="https://news.ycombinator.com/item?id=37823805">https://news.ycombinator.com/item?id=37823805</a>  </li>
-<li>In-Register Shuffles - Algorithmica, accessed on May 7, 2026, <a href="https://en.algorithmica.org/hpc/simd/shuffling/">https://en.algorithmica.org/hpc/simd/shuffling/</a>  </li>
-<li>Vector256.Shuffle Method (System.Runtime.Intrinsics) - Microsoft Learn, accessed on May 7, 2026, <a href="https://learn.microsoft.com/en-us/dotnet/api/system.runtime.intrinsics.vector256.shuffle?view=net-10.0">https://learn.microsoft.com/en-us/dotnet/api/system.runtime.intrinsics.vector256.shuffle?view=net-10.0</a>  </li>
-<li>SIMD: is there an "equivalent" to _mm_shuffle_ep*()? - Ziggit, accessed on May 7, 2026, <a href="https://ziggit.dev/t/simd-is-there-an-equivalent-to-mm-shuffle-ep/2251">https://ziggit.dev/t/simd-is-there-an-equivalent-to-mm-shuffle-ep/2251</a>  </li>
-<li>Performance Improvements in .NET 9 | by Rico Mariani - Medium, accessed on May 7, 2026, <a href="https://ricomariani.medium.com/performance-improvements-in-net-9-d32afb4febca">https://ricomariani.medium.com/performance-improvements-in-net-9-d32afb4febca</a>  </li>
-<li>A (Draft) Taxonomy of SIMD Usage - Branch Free, accessed on May 7, 2026, <a href="https://branchfree.org/2024/06/09/a-draft-taxonomy-of-simd-usage/">https://branchfree.org/2024/06/09/a-draft-taxonomy-of-simd-usage/</a>  </li>
-<li>How to swap elements in a System.Numerics.Vector - Stack Overflow, accessed on May 7, 2026, <a href="https://stackoverflow.com/questions/74205996/how-to-swap-elements-in-a-system-numerics-vector">https://stackoverflow.com/questions/74205996/how-to-swap-elements-in-a-system-numerics-vector</a>  </li>
-<li>Single Instruction, Multiple Data (SIMD) in .NET | by Antão Almada | Medium, accessed on May 7, 2026, <a href="https://antao-almada.medium.com/single-instruction-multiple-data-simd-in-net-393b8cf9a90">https://antao-almada.medium.com/single-instruction-multiple-data-simd-in-net-393b8cf9a90</a>  </li>
-<li>@Vector best practices - Explain - Ziggit, accessed on May 7, 2026, <a href="https://ziggit.dev/t/vector-best-practices/6100">https://ziggit.dev/t/vector-best-practices/6100</a>  </li>
-<li>Array API — NumPy v2.1 Manual, accessed on May 7, 2026, <a href="https://numpy.org/doc/2.1/reference/c-api/array.html">https://numpy.org/doc/2.1/reference/c-api/array.html</a>  </li>
-<li>Array API — NumPy v2.5.dev0 Manual, accessed on May 7, 2026, <a href="https://numpy.org/devdocs/reference/c-api/array.html">https://numpy.org/devdocs/reference/c-api/array.html</a>  </li>
-<li>Memory management in NumPy, accessed on May 7, 2026, <a href="https://numpy.org/devdocs/reference/c-api/data_memory.html">https://numpy.org/devdocs/reference/c-api/data_memory.html</a>  </li>
-<li>Python types and C-structures — NumPy v2.4 Manual, accessed on May 7, 2026, <a href="https://numpy.org/doc/2.4/reference/c-api/types-and-structures.html">https://numpy.org/doc/2.4/reference/c-api/types-and-structures.html</a>  </li>
-<li>Best Practices for passing numpy data pointer to C ? - Google Groups, accessed on May 7, 2026, <a href="https://groups.google.com/g/cython-users/c/8uuxjB_wbBQ/m/1gU2P61B3rkJ">https://groups.google.com/g/cython-users/c/8uuxjB_wbBQ/m/1gU2P61B3rkJ</a>  </li>
-<li>NumPy C code explanations, accessed on May 7, 2026, <a href="https://numpy.org/doc/2.0/dev/internals.code-explanations.html">https://numpy.org/doc/2.0/dev/internals.code-explanations.html</a>  </li>
-<li>Numpy arrays ctors and flags rework #338 - pybind/pybind11 - GitHub, accessed on May 7, 2026, <a href="https://github.com/pybind/pybind11/issues/338">https://github.com/pybind/pybind11/issues/338</a>  </li>
-<li>pandas/pandas/core/arrays/categorical.py at main · pandas-dev ..., accessed on May 7, 2026, <a href="https://github.com/pandas-dev/pandas/blob/main/pandas/core/arrays/categorical.py">https://github.com/pandas-dev/pandas/blob/main/pandas/core/arrays/categorical.py</a>  </li>
-<li>Finding Reference-Counting Errors in Python/C Programs with Affine Analysis, accessed on May 7, 2026, <a href="https://www.cse.psu.edu/~gxt29/papers/refcount.pdf">https://www.cse.psu.edu/\~gxt29/papers/refcount.pdf</a>  </li>
-<li>Internal Structure of Pandas DataFrames, accessed on May 7, 2026, <a href="https://dkharazi.github.io/blog/blockmanager/">https://dkharazi.github.io/blog/blockmanager/</a>  </li>
-<li>Deep dive into Pandas DataFrame class | by Darius | Towards Dev - Medium, accessed on May 7, 2026, <a href="https://medium.com/towardsdev/deep-dive-into-pandas-dataframe-class-d86e6315d664">https://medium.com/towardsdev/deep-dive-into-pandas-dataframe-class-d86e6315d664</a>  </li>
-<li>The one pandas internal I teach all my new colleagues: the BlockManager - - Uwe's Blog, accessed on May 7, 2026, <a href="https://uwekorn.com/2020/05/24/the-one-pandas-internal.html">https://uwekorn.com/2020/05/24/the-one-pandas-internal.html</a>  </li>
-<li>How Pandas DataFrames Manage and Store Data Efficiently - Jacob Padilla, accessed on May 7, 2026, <a href="https://jacobpadilla.com/writing/dataframe-internals">https://jacobpadilla.com/writing/dataframe-internals</a>  </li>
-<li>How is Pandas Block Manager improving performance? - Stack Overflow, accessed on May 7, 2026, <a href="https://stackoverflow.com/questions/72697587/how-is-pandas-block-manager-improving-performance">https://stackoverflow.com/questions/72697587/how-is-pandas-block-manager-improving-performance</a>  </li>
-<li>Deep Dive into pandas Copy-on-Write Mode - Part I - Patrick Hoefler, accessed on May 7, 2026, <a href="https://phofl.github.io/cow-deep-dive.html">https://phofl.github.io/cow-deep-dive.html</a>  </li>
-<li>Deep dive into pandas Copy-on-Write mode - part I | Towards Data Science, accessed on May 7, 2026, <a href="https://towardsdatascience.com/deep-dive-into-pandas-copy-on-write-mode-part-i-26982e7408c6/">https://towardsdatascience.com/deep-dive-into-pandas-copy-on-write-mode-part-i-26982e7408c6/</a>  </li>
-<li>Anyway to force pandas to not cache objects used as index? - Stack Overflow, accessed on May 7, 2026, <a href="https://stackoverflow.com/questions/73914210/anyway-to-force-pandas-to-not-cache-objects-used-as-index">https://stackoverflow.com/questions/73914210/anyway-to-force-pandas-to-not-cache-objects-used-as-index</a>  </li>
-<li>pandas.Categorical.from_codes — pandas 3.0.2 documentation - PyData |, accessed on May 7, 2026, <a href="https://pandas.pydata.org/docs/reference/api/pandas.Categorical.from_codes.html">https://pandas.pydata.org/docs/reference/api/pandas.Categorical.from_codes.html</a>  </li>
-<li>pandas.Series — pandas 3.0.2 documentation, accessed on May 7, 2026, <a href="https://pandas.pydata.org/docs/reference/api/pandas.Series.html">https://pandas.pydata.org/docs/reference/api/pandas.Series.html</a>  </li>
-<li>How do I clear the cache from @cached_property decorator? - Stack Overflow, accessed on May 7, 2026, <a href="https://stackoverflow.com/questions/62662564/how-do-i-clear-the-cache-from-cached-property-decorator">https://stackoverflow.com/questions/62662564/how-do-i-clear-the-cache-from-cached-property-decorator</a>  </li>
-<li>Source code for pandas.core.categorical - ODDT's documentation! - Read the Docs, accessed on May 7, 2026, <a href="https://oddt.readthedocs.io/en/0.4/_modules/pandas/core/categorical.html">https://oddt.readthedocs.io/en/0.4/_modules/pandas/core/categorical.html</a>  </li>
-<li>Pandas DataFrame reset cache - python - Stack Overflow, accessed on May 7, 2026, <a href="https://stackoverflow.com/questions/46892046/pandas-dataframe-reset-cache">https://stackoverflow.com/questions/46892046/pandas-dataframe-reset-cache</a>  </li>
-<li>How to update categorical index to used categories in Pandas - Stack Overflow, accessed on May 7, 2026, <a href="https://stackoverflow.com/questions/66589053/how-to-update-categorical-index-to-used-categories-in-pandas">https://stackoverflow.com/questions/66589053/how-to-update-categorical-index-to-used-categories-in-pandas</a></li>
-</ol>
+          <aside class="docs-sidebar reveal" aria-label="Page contents"><strong>On this page</strong><nav><a href="#work-split">Work split</a>
+<a href="#complexity">Complexity</a>
+<a href="#validation-before-mutation">Validation before mutation</a>
+<a href="#supported-code-widths">Supported code widths</a>
+<a href="#copy-versus-in-place">Copy versus in-place</a>
+<a href="#cache-behavior">Cache behavior</a></nav></aside>
+          <article class="doc-article">
+            <section class="doc-section reveal" id="overview">
+  <h2>Overview</h2>
+  <p><code>zh_catmut</code> accelerates categorical remapping by reducing the full-column operation to a dense integer lookup table (LUT) over Pandas categorical codes.</p>
+</section>
+<section class="doc-section reveal" id="work-split">
+  <h2>Work split</h2>
+  <p>The Python layer handles the small metadata problem:</p>
+  <ol><li>Read category labels through public Pandas APIs.</li><li>Apply the user mapping once per category, not once per row.</li><li>Deduplicate target labels in first-seen order.</li><li>Build a dense <code>np.int64</code> LUT where <code>lut[old_code] = new_code</code>.</li></ol>
+  <p>The Zig layer handles the large row-count problem:</p>
+  <div class="code-panel"><pre data-copy><code class="language-text">for code in codes:
+    if code == missing_code:
+        preserve missing_code
+    else:
+        code = lut[code]</code></pre></div>
+  <p>This keeps labels, Python objects, dictionaries, and Pandas internals out of the native hot path.</p>
+</section>
+<section class="doc-section reveal" id="complexity">
+  <h2>Complexity</h2>
+  <p>Let <code>n</code> be the number of rows and <code>k</code> be the number of categories.</p>
+  <ul><li>LUT construction: <code>O(k)</code> Python work.</li><li>Native validation: <code>O(n)</code> contiguous integer scan.</li><li>Native remap: <code>O(n)</code> contiguous integer scan.</li><li>High-level default output allocation: one Python-owned destination codes buffer.</li></ul>
+  <p>The algorithm avoids per-row Python callbacks, object-array expansion, and boolean-mask fanout.</p>
+</section>
+<section class="doc-section reveal" id="validation-before-mutation">
+  <h2>Validation before mutation</h2>
+  <p>Native execution is intentionally two-phase:</p>
+  <ol><li><code>zhcm_predict_remap_lut</code> checks source codes, LUT outputs, target category bounds, missing-code policy, pointer nullness, and pointer alignment without writing.</li><li><code>zhcm_remap_lut_inplace</code> or <code>zhcm_remap_lut_copy</code> performs the remap only after validation succeeds.</li></ol>
+  <p>For in-place mutation, validation failure is all-or-nothing: no element is written before invalid input is reported.</p>
+</section>
+<section class="doc-section reveal" id="supported-code-widths">
+  <h2>Supported code widths</h2>
+  <p>Pandas categorical codes are signed because <code>-1</code> is the missing sentinel. The native ABI supports the signed physical widths Pandas uses:</p>
+  <ul><li><code>int8</code></li><li><code>int16</code></li><li><code>int32</code></li><li><code>int64</code></li></ul>
+  <p>Unsigned, floating, object, strided, non-1D, unaligned, and read-only low-level buffers are rejected by Python gates before pointer export.</p>
+</section>
+<section class="doc-section reveal" id="copy-versus-in-place">
+  <h2>Copy versus in-place</h2>
+  <p><code>remap_categorical</code> defaults to explicit copy semantics. It reads codes through public Pandas APIs, writes into a Python-owned destination buffer, and constructs the returned object with <code>pd.Categorical.from_codes(..., validate=True)</code>.</p>
+  <p><code>remap_codes_inplace</code> remains available for callers that already own a writable, aligned, C-contiguous NumPy codes buffer and want direct mutation.</p>
+  <p><code>remap_categorical(..., copy_fallback=False, assume_unique=True)</code> is an expert-only escape hatch for controlled in-place Pandas mutation after the same dtype, shape, alignment, range, and native validation gates pass.</p>
+</section>
+<section class="doc-section reveal" id="cache-behavior">
+  <h2>Cache behavior</h2>
+  <p>The scalar native loop is memory-bandwidth oriented. It benefits from:</p>
+  <ul><li>sequential reads over the codes buffer;</li><li>a dense LUT that is typically small enough to remain cache-resident;</li><li>no Python object allocation inside the row loop;</li><li>no per-row hash table lookup;</li><li>no temporary boolean masks.</li></ul>
+  <p>SIMD and threaded kernels can be added behind the same ABI only after benchmarks show they improve end-to-end runtime across realistic category counts and memory bandwidth constraints.</p>
+</section>
           </article>
         </div>
       </main>
-
       <footer class="site-footer">
         <div class="footer-inner">
-          <div>zh_catmut: native LUT remapping for large Pandas categorical code buffers.</div>
+          <span>Apache-2.0 · Generated from Markdown by <code>scripts/build_docs.py</code></span>
           <div class="footer-links">
+            <a href="index.html">Home</a>
             <a href="docs.html">Docs</a>
-            <a href="architecture.html">Architecture</a>
-            <a href="index.html">Landing</a>
-            <a href="https://github.com/mohamedhossammohamed" target="_blank" rel="noopener">GitHub</a>
-            <a href="https://x.com/MohamedHz72007" target="_blank" rel="noopener">X</a>
-            <a href="https://www.apache.org/licenses/LICENSE-2.0" target="_blank" rel="noopener">Apache-2.0</a>
+            <a href="changelog.html">Changelog</a>
+            <a href="https://github.com/mohamedhossammohamed/zh_catmut">GitHub</a>
           </div>
         </div>
       </footer>
     </div>
-    <script src="assets/js/site.js"></script>
+    <script src="assets/js/site.js" defer></script>
     
   </body>
 </html>

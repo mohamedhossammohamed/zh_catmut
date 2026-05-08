@@ -11,38 +11,43 @@
     <priority>0.9</priority>
   </url>
   <url>
+    <loc>https://mohamedhossammohamed.github.io/zh_catmut/README.html</loc>
+    <lastmod>2026-05-08</lastmod>
+    <priority>0.3</priority>
+  </url>
+  <url>
     <loc>https://mohamedhossammohamed.github.io/zh_catmut/architecture.html</loc>
     <lastmod>2026-05-08</lastmod>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://mohamedhossammohamed.github.io/zh_catmut/README.html</loc>
-    <lastmod>2026-05-08</lastmod>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://mohamedhossammohamed.github.io/zh_catmut/publishing.html</loc>
+    <loc>https://mohamedhossammohamed.github.io/zh_catmut/01-categorical-internals-and-memory.html</loc>
     <lastmod>2026-05-08</lastmod>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://mohamedhossammohamed.github.io/zh_catmut/01-categorical-internals-and-memory.html</loc>
-    <lastmod>2026-05-08</lastmod>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://mohamedhossammohamed.github.io/zh_catmut/02-ffi-zero-copy-architecture.html</loc>
     <lastmod>2026-05-08</lastmod>
-    <priority>0.6</priority>
+    <priority>0.7</priority>
   </url>
   <url>
     <loc>https://mohamedhossammohamed.github.io/zh_catmut/03-performance-algorithms.html</loc>
     <lastmod>2026-05-08</lastmod>
-    <priority>0.6</priority>
+    <priority>0.7</priority>
   </url>
   <url>
     <loc>https://mohamedhossammohamed.github.io/zh_catmut/04-build-systems-and-distribution.html</loc>
     <lastmod>2026-05-08</lastmod>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://mohamedhossammohamed.github.io/zh_catmut/publishing.html</loc>
+    <lastmod>2026-05-08</lastmod>
     <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://mohamedhossammohamed.github.io/zh_catmut/changelog.html</loc>
+    <lastmod>2026-05-08</lastmod>
+    <priority>0.8</priority>
   </url>
 </urlset>

@@ -229,6 +229,11 @@ code {
   background: rgba(255, 255, 255, 0.07);
 }
 
+.nav-links a[aria-current="page"] {
+  background: rgba(77, 163, 255, 0.14);
+  box-shadow: inset 0 0 0 1px rgba(77, 163, 255, 0.24);
+}
+
 .nav-links a:hover {
   transform: translateY(-1px);
 }
@@ -1199,6 +1204,13 @@ p {
   line-height: 1.74;
 }
 
+.doc-section a {
+  color: #93c5fd;
+  text-decoration: underline;
+  text-decoration-color: rgba(147, 197, 253, 0.38);
+  text-underline-offset: 0.18em;
+}
+
 .doc-section p:last-child {
   margin-bottom: 0;
 }
@@ -1282,6 +1294,13 @@ p {
 
 .doc-table td {
   color: #c2d0e1;
+}
+
+.mermaid {
+  padding: 1rem;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  background: rgba(255, 255, 255, 0.045);
 }
 
 .sequence {
@@ -1578,5 +1597,67 @@ p {
   .reveal {
     opacity: 1;
     transform: none;
+  }
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    color-scheme: light;
+    --bg: #f7fafc;
+    --bg-2: #eef4fb;
+    --bg-3: #e6eef8;
+    --panel: rgba(255, 255, 255, 0.82);
+    --panel-strong: rgba(255, 255, 255, 0.95);
+    --panel-soft: rgba(15, 23, 42, 0.055);
+    --line: rgba(15, 23, 42, 0.14);
+    --line-strong: rgba(15, 23, 42, 0.22);
+    --text: #111827;
+    --muted: #475569;
+    --muted-2: #64748b;
+    --shadow: 0 24px 90px rgba(15, 23, 42, 0.14);
+  }
+
+  body {
+    background:
+      radial-gradient(circle at 18% 12%, rgba(77, 163, 255, 0.18), transparent 30rem),
+      radial-gradient(circle at 82% 4%, rgba(247, 161, 61, 0.14), transparent 28rem),
+      radial-gradient(circle at 68% 62%, rgba(70, 217, 147, 0.12), transparent 26rem),
+      linear-gradient(135deg, #f8fbff, #eef5ff 48%, #f7fff9);
+  }
+
+  .nav {
+    background: rgba(248, 251, 255, 0.78);
+  }
+
+  .nav-links {
+    background: rgba(248, 251, 255, 0.94);
+  }
+
+  code,
+  .doc-table th,
+  .doc-table td,
+  .doc-section p,
+  .doc-section li,
+  .meta-box strong,
+  .docs-sidebar strong,
+  .info-box strong {
+    color: var(--text);
+  }
+
+  .doc-section,
+  .docs-sidebar,
+  .info-box,
+  .meta-box,
+  .mermaid {
+    background: rgba(255, 255, 255, 0.72);
+    border-color: rgba(15, 23, 42, 0.12);
+  }
+
+  .code-panel {
+    background: #0f172a;
+  }
+
+  .site-footer {
+    border-top-color: rgba(15, 23, 42, 0.12);
   }
 }

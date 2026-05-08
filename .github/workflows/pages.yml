@@ -36,6 +36,9 @@ jobs:
           python -m pip install Pillow
           python scripts/generate_og_image.py
 
+      - name: Build static documentation
+        run: python scripts/build_docs.py
+
       - name: Configure Pages
         uses: actions/configure-pages@v5
         with:

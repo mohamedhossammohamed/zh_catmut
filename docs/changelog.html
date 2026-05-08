@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Changelog · zh_catmut</title>
+    <meta name="description" content="Version history and breaking-change notes for zh_catmut.">
+    <meta name="robots" content="index,follow">
+    <meta name="title" content="Changelog · zh_catmut">
+    <link rel="canonical" href="https://mohamedhossammohamed.github.io/zh_catmut/changelog.html">
+    <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="assets/social/og-image.png">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="zh_catmut">
+    <meta property="og:url" content="https://mohamedhossammohamed.github.io/zh_catmut/changelog.html">
+    <meta property="og:title" content="Changelog · zh_catmut">
+    <meta property="og:description" content="Version history and breaking-change notes for zh_catmut.">
+    <meta property="og:image" content="https://mohamedhossammohamed.github.io/zh_catmut/assets/social/og-image.png">
+    <meta property="og:image:secure_url" content="https://mohamedhossammohamed.github.io/zh_catmut/assets/social/og-image.png">
+    <meta property="og:image:type" content="image/png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="Version history and breaking-change notes for zh_catmut.">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:site" content="@MohamedHz72007">
+    <meta name="twitter:creator" content="@MohamedHz72007">
+    <meta name="twitter:url" content="https://mohamedhossammohamed.github.io/zh_catmut/changelog.html">
+    <meta name="twitter:title" content="Changelog · zh_catmut">
+    <meta name="twitter:description" content="Version history and breaking-change notes for zh_catmut.">
+    <meta name="twitter:image" content="https://mohamedhossammohamed.github.io/zh_catmut/assets/social/og-image.png">
+    <meta name="twitter:image:alt" content="Version history and breaking-change notes for zh_catmut.">
+    <link rel="stylesheet" href="assets/css/site.css">
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    
+    <div class="site-shell">
+      <header class="nav">
+        <div class="nav-inner">
+          <a class="brand" href="index.html" aria-label="zh_catmut home">
+            <span class="brand-mark" aria-hidden="true"></span>
+            <span class="brand-text"><span class="brand-name">zh_catmut</span><span class="brand-subtitle">native categorical remapping</span></span>
+          </a>
+          <button class="nav-toggle" type="button" data-nav-toggle aria-label="Toggle navigation" aria-expanded="false"><span></span></button>
+          <nav class="nav-links" aria-label="Primary navigation">
+            <a href="index.html">Home</a>
+<a href="docs.html">Docs</a>
+<a href="architecture.html">Architecture</a>
+<a href="publishing.html">Publishing</a>
+<a href="changelog.html" aria-current="page">Changelog</a>
+          </nav>
+        </div>
+      </header>
+      <main id="main">
+        <section class="page-hero">
+          <div class="container">
+            <div class="reveal">
+              <p class="eyebrow"><span class="eyebrow-dot"></span>Version history and breaking-change notes for zh_catmut.</p>
+              <h1>Changelog</h1>
+            </div>
+            <div class="page-meta reveal">
+              <div class="meta-box"><strong>Version</strong><span>0.2.0 / ABI 2</span></div>
+              <div class="meta-box"><strong>Runtime</strong><span>Python 3.9+, NumPy >= 1.23, Pandas >= 2.0</span></div>
+              <div class="meta-box"><strong>Native core</strong><span>Zig shared library through a C ABI</span></div>
+            </div>
+          </div>
+        </section>
+        <div class="container docs-layout">
+          <aside class="docs-sidebar reveal" aria-label="Page contents"><strong>On this page</strong><nav><a href="#0-2-0">0.2.0</a>
+<a href="#0-1-0">0.1.0</a></nav></aside>
+          <article class="doc-article">
+            <section class="doc-section reveal" id="0-2-0">
+  <h2>0.2.0</h2>
+  <ul><li>Removed reserved <code>threads</code> parameters from the Python and C ABI surfaces.</li><li>Bumped native ABI to version 2 and added explicit pointer-alignment preflight checks.</li><li>Switched high-level Pandas remapping to public-code extraction and explicit-copy defaults.</li><li>Re-enabled Pandas <code>from_codes</code> validation for the returned categorical.</li><li>Added <code>pd.CategoricalIndex</code> support and broader edge-case tests.</li><li>Added NumPy and Pandas dependency lower bounds.</li></ul>
+</section>
+<section class="doc-section reveal" id="0-1-0">
+  <h2>0.1.0</h2>
+  <ul><li>Initial public release.</li><li>Bundled Zig C ABI for dense categorical code LUT remapping.</li><li>Python integration for Pandas <code>Series</code> and <code>Categorical</code> inputs.</li><li>Native and Python validation for dtype, shape, contiguity, missing codes, and target code ranges.</li></ul>
+</section>
+          </article>
+        </div>
+      </main>
+      <footer class="site-footer">
+        <div class="footer-inner">
+          <span>Apache-2.0 · Generated from Markdown by <code>scripts/build_docs.py</code></span>
+          <div class="footer-links">
+            <a href="index.html">Home</a>
+            <a href="docs.html">Docs</a>
+            <a href="changelog.html">Changelog</a>
+            <a href="https://github.com/mohamedhossammohamed/zh_catmut">GitHub</a>
+          </div>
+        </div>
+      </footer>
+    </div>
+    <script src="assets/js/site.js" defer></script>
+    
+  </body>
+</html>

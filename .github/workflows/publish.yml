@@ -44,7 +44,6 @@ jobs:
           python-version: "3.12"
 
       - name: Set up Zig
-        if: runner.os != 'Linux'
         uses: mlugg/setup-zig@v2
         with:
           version: 0.16.0

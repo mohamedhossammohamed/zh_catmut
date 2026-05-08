@@ -15,14 +15,13 @@
 series = series.cat.rename_categories({"pending": "active"})
 series = series.cat.set_categories(["active", "disabled"])
 
-# After: build a dense metadata LUT, mutate integer categorical codes natively,
+# After: build a dense metadata LUT, remap integer categorical codes natively,
 # and return a refreshed categorical object.
 from zh_catmut import remap_categorical
 
 series = remap_categorical(
     series,
     {"pending": "active", "disabled_old": "disabled"},
-    copy_fallback=True,
 )
 ```
 
@@ -59,10 +58,10 @@ import pandas as pd
 from zh_catmut import remap_categorical
 
 s = pd.Series(pd.Categorical(["new", "old", "old", None]))
-out = remap_categorical(s, {"old": "new"}, copy_fallback=True)
+out = remap_categorical(s, {"old": "new"})
 ```
 
-`copy_fallback=True` is the safest default for application code because it allocates a Python-owned destination codes buffer and keeps the original object unchanged.
+`remap_categorical` uses explicit copy semantics by default so the original Pandas object remains unchanged.
 
 ## Why it's fast
 
@@ -71,9 +70,9 @@ out = remap_categorical(s, {"old": "new"}, copy_fallback=True)
 - A bundled Zig shared library receives only raw pointers, lengths, primitive flags, and POD reports through a C ABI.
 - The native loop remaps contiguous `int8`, `int16`, `int32`, or `int64` code buffers in one batch.
 - `ctypes.CDLL` is used so the GIL is released while the native remap executes.
-- Python runs shape, dtype, contiguity, writeability, and Copy-on-Write safety gates before exporting pointers.
+- Python runs shape, dtype, contiguity, alignment, writeability, and Copy-on-Write safety gates before exporting pointers.
 - Native validation is all-or-nothing: invalid source codes, invalid target codes, null pointers, and oversized lengths are rejected before mutation.
-- If in-place mutation is unsafe, `copy_fallback=True` uses a Python-owned destination buffer and keeps the source buffer unchanged.
+- The default Pandas path uses a Python-owned destination buffer and keeps the source buffer unchanged.
 
 ## Public API
 
@@ -81,7 +80,7 @@ out = remap_categorical(s, {"old": "new"}, copy_fallback=True)
 from zh_catmut import remap_categorical, remap_codes_inplace
 ```
 
-Use `remap_categorical` for Pandas objects and `remap_codes_inplace` only when you already own a writable, contiguous NumPy codes buffer and a dense `int64` LUT.
+Use `remap_categorical` for Pandas objects and `remap_codes_inplace` only when you already own a writable, aligned, contiguous NumPy codes buffer and a dense `int64` LUT.
 
 ### `remap_categorical`
 
@@ -91,16 +90,14 @@ remap_categorical(
     mapping,
     *,
     assume_unique=False,
-    copy_fallback=False,
-    threads=0,
+    copy_fallback=True,
 )
 ```
 
-- `obj`: a Pandas `Series` with categorical dtype or a `pd.Categorical`.
+- `obj`: a Pandas `Series` with categorical dtype, `pd.Categorical`, or `pd.CategoricalIndex`.
 - `mapping`: mapping from old labels to new labels. Labels not present in the mapping are preserved.
-- `copy_fallback`: when `True`, allocate a destination codes buffer and avoid in-place ownership risk.
+- `copy_fallback`: when `True`, allocate a destination codes buffer and avoid in-place ownership risk. This is the default.
 - `assume_unique`: expert-only escape hatch for controlled in-place mutation after all other gates pass.
-- `threads`: reserved for future native parallelism. The current V1 kernel accepts `0` or `1` and uses the scalar remap path.
 
 ### `remap_codes_inplace`
 
@@ -112,12 +109,11 @@ remap_codes_inplace(
     target_category_count,
     missing_code=-1,
     allow_missing=True,
-    threads=0,
 )
 ```
 
-- `codes`: one-dimensional, C-contiguous NumPy array with dtype `int8`, `int16`, `int32`, or `int64`.
-- `lut`: one-dimensional, C-contiguous `np.int64` lookup table.
+- `codes`: one-dimensional, aligned, writable, C-contiguous NumPy array with dtype `int8`, `int16`, `int32`, or `int64`.
+- `lut`: one-dimensional, aligned, C-contiguous `np.int64` lookup table.
 - `target_category_count`: every mapped non-missing code must be in `[0, target_category_count)`.
 - `missing_code`: default `-1`, matching Pandas categorical codes.
 - `allow_missing`: when `False`, missing input or missing LUT output is rejected before mutation.
@@ -135,7 +131,7 @@ python -m zh_catmut doctor
 ```
 
 - `info` prints the project purpose, install command, API summary, and support links.
-- `example` prints a minimal `copy_fallback=True` Pandas example.
+- `example` prints a minimal Pandas example.
 - `doctor` verifies NumPy/Pandas imports, native library loading, ABI version, and low/high-level remap smoke tests.
 - If your Python user scripts directory is not on `PATH`, use `python -m zh_catmut ...` instead of `zh-catmut ...`.
 
@@ -149,7 +145,7 @@ python -m pytest -q
 cd native && zig build test
 ```
 
-The Python tests load the packaged native library, verify the ABI, exercise every supported integer code dtype, check all-or-nothing validation, run the Pandas copy-fallback path, and execute `python -m zh_catmut doctor`.
+The Python tests load the packaged native library, verify the ABI, exercise every supported integer code dtype, check all-or-nothing validation, cover shape/dtype/contiguity/alignment/writeability gates, run Pandas Series/Categorical/CategoricalIndex paths, and execute `python -m zh_catmut doctor`.
 
 ## Troubleshooting
 
@@ -175,10 +171,10 @@ ZIG=/path/to/zig python -m pip install zh-catmut
 
 ### Copy-on-Write safety errors
 
-For ordinary Pandas application code, prefer:
+For ordinary Pandas application code, use the default:
 
 ```python
-out = remap_categorical(series, mapping, copy_fallback=True)
+out = remap_categorical(series, mapping)
 ```
 
 Use `assume_unique=True` only when you control the object lifetime and know the underlying categorical codes buffer is not shared.
@@ -187,7 +183,8 @@ Use `assume_unique=True` only when you control the object lifetime and know the 
 
 - Python 3.9+
 - CPython
-- NumPy + Pandas
+- NumPy >= 1.23
+- Pandas >= 2.0
 - Pandas categorical codes backed by contiguous signed integer arrays
 - Code dtypes: `int8`, `int16`, `int32`, `int64`
 

@@ -16,13 +16,13 @@ code buffers without expanding labels into object arrays.
 | 3 | [03-performance-algorithms.md](03-performance-algorithms.md) | Performance strategies, CPU cache locality, SIMD options, and lookup table tradeoffs |
 | 4 | [04-build-systems-and-distribution.md](04-build-systems-and-distribution.md) | Build systems, CI/CD pipelines, cross-platform wheel distribution, and dynamic loading |
 | 5 | [publishing.md](publishing.md) | PyPI release workflow, trusted publishing setup, and install verification |
+| 6 | [../CHANGELOG.md](../CHANGELOG.md) | Version history, API changes, and native ABI changes |
 
 ## Architecture Overview
 
-The system is designed to solve the critical bottleneck of merging or relabeling
-categorical columns in Pandas DataFrames exceeding 100 million rows. The standard
-Python/NumPy execution path triggers catastrophic memory inflation (object-mode fallback)
-that can increase memory usage from ~100 MB to 5-10 GB.
+The system is designed for relabeling categorical columns where the category metadata is
+small but the integer codes buffer is large. The goal is to avoid expanding a full column
+into object arrays or building large temporary masks.
 
 ### Core Architectural Layers
 
@@ -30,14 +30,14 @@ that can increase memory usage from ~100 MB to 5-10 GB.
 2. **Boundary Layer** — Foreign Function Interface (FFI) via C-ABI with borrowed pointer handoff
 3. **Compute Layer** — Native scalar LUT remapping in Zig with explicit validation reports
 4. **Packaging Layer** — PEP 517 build hooks, cibuildwheel CI matrices, and platform wheels
-5. **Runtime Layer** — Dynamic library loading, Python-owned buffer safety, and CoW-compliant reintegration
+5. **Runtime Layer** — Dynamic library loading, Python-owned buffer safety, and validated Pandas reintegration
 
 ### Key Design Principles
 
 - **Zero-Copy In-Place Path:** Pass raw memory pointers across the FFI boundary without serialization
 - **GIL Bypass:** Release the Python Global Interpreter Lock during native execution to maximize throughput
 - **Memory Safety:** Keep Python as the owner of all buffers and expire native borrowed pointers on return
-- **CoW Compliance:** Respect Pandas 3.0 Copy-on-Write semantics via `pd.Categorical.from_codes()` reintegration
+- **CoW Compliance:** Prefer public Pandas APIs and explicit copy semantics for high-level remaps
 - **Frictionless Distribution:** Pre-compile wheels for Linux, macOS, and Windows via GitHub Actions + cibuildwheel
 
 ## Reading Order
@@ -49,3 +49,4 @@ For engineers new to the codebase, the recommended reading order is:
 3. **03-performance-algorithms.md** — Understand *how* we maximize CPU throughput
 4. **04-build-systems-and-distribution.md** — Understand *how* we package and ship the native binaries
 5. **publishing.md** — Understand *how* to publish and verify the package
+6. **CHANGELOG.md** — Understand *what changed* between releases

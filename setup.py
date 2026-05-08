@@ -89,6 +89,8 @@ def _prebuilt_library() -> Optional[Path]:
     if explicit:
         path = Path(explicit)
         return path if path.exists() else None
+    if os.environ.get("ZH_CATMUT_USE_PREBUILT") != "1":
+        return None
     tag = _platform_tag()
     if tag is None:
         return None

@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const ABI_VERSION: u32 = 1;
+const ABI_VERSION: u32 = 2;
 
 const DTYPE_I8: u32 = 1;
 const DTYPE_I16: u32 = 2;
@@ -16,6 +16,7 @@ const ERR_CODE_OUT_OF_RANGE: i32 = 5;
 const ERR_TARGET_OUT_OF_RANGE: i32 = 6;
 const ERR_INTEGER_OVERFLOW: i32 = 7;
 const ERR_THREAD_FAILURE: i32 = 8;
+const ERR_MISALIGNED_POINTER: i32 = 9;
 const ERR_PYTHON_GATE_REJECTED: i32 = 50;
 const ERR_INTERNAL: i32 = 255;
 
@@ -99,6 +100,7 @@ export fn zhcm_status_message(status: i32) callconv(.c) [*:0]const u8 {
         ERR_TARGET_OUT_OF_RANGE => "target code out of range",
         ERR_INTEGER_OVERFLOW => "integer overflow",
         ERR_THREAD_FAILURE => "thread failure",
+        ERR_MISALIGNED_POINTER => "misaligned pointer",
         ERR_PYTHON_GATE_REJECTED => "python gate rejected",
         ERR_INTERNAL => "internal error",
         else => "unknown status",
@@ -137,11 +139,9 @@ export fn zhcm_remap_lut_inplace(
     lut_len: usize,
     target_category_count: usize,
     missing_code: i64,
-    thread_count: u32,
     flags: u64,
     out_report: ?*ExecReport,
 ) callconv(.c) i32 {
-    _ = thread_count;
     initExecReport(out_report, OK, flags, item_count);
 
     const read_ptr: ?*const anyopaque = if (codes_ptr) |p| @ptrCast(p) else null;
@@ -173,11 +173,9 @@ export fn zhcm_remap_lut_copy(
     lut_len: usize,
     target_category_count: usize,
     missing_code: i64,
-    thread_count: u32,
     flags: u64,
     out_report: ?*ExecReport,
 ) callconv(.c) i32 {
-    _ = thread_count;
     initExecReport(out_report, OK, flags, item_count);
 
     const preflight_status = preflight(src_codes_ptr, dst_codes_ptr, item_count, dtype, lut_ptr, lut_len, target_category_count, true);
@@ -339,6 +337,7 @@ fn preflight(
     require_write_ptr: bool,
 ) i32 {
     const size = dtypeSize(dtype) orelse return ERR_UNSUPPORTED_DTYPE;
+    const alignment = dtypeAlignment(dtype) orelse return ERR_UNSUPPORTED_DTYPE;
 
     if (item_count > ISIZE_MAX_AS_USIZE or lut_len > ISIZE_MAX_AS_USIZE or target_category_count > ISIZE_MAX_AS_USIZE) {
         return ERR_INTEGER_OVERFLOW;
@@ -350,6 +349,21 @@ fn preflight(
     if (item_count > 0 and read_ptr == null) return ERR_NULL_POINTER;
     if (require_write_ptr and item_count > 0 and write_ptr == null) return ERR_NULL_POINTER;
     if (lut_len > 0 and lut_ptr == null) return ERR_NULL_POINTER;
+    if (item_count > 0) {
+        if (read_ptr) |ptr| {
+            if (!isPointerAligned(ptr, alignment)) return ERR_MISALIGNED_POINTER;
+        }
+        if (require_write_ptr) {
+            if (write_ptr) |ptr| {
+                if (!isPointerAligned(ptr, alignment)) return ERR_MISALIGNED_POINTER;
+            }
+        }
+    }
+    if (lut_len > 0) {
+        if (lut_ptr) |ptr| {
+            if (!isPointerAligned(ptr, @alignOf(i64))) return ERR_MISALIGNED_POINTER;
+        }
+    }
 
     return OK;
 }
@@ -362,6 +376,20 @@ fn dtypeSize(dtype: u32) ?usize {
         DTYPE_I64 => @sizeOf(i64),
         else => null,
     };
+}
+
+fn dtypeAlignment(dtype: u32) ?usize {
+    return switch (dtype) {
+        DTYPE_I8 => @alignOf(i8),
+        DTYPE_I16 => @alignOf(i16),
+        DTYPE_I32 => @alignOf(i32),
+        DTYPE_I64 => @alignOf(i64),
+        else => null,
+    };
+}
+
+fn isPointerAligned(ptr: anytype, alignment: usize) bool {
+    return @intFromPtr(ptr) % alignment == 0;
 }
 
 fn validateByDtype(
@@ -566,7 +594,6 @@ test "zhcm_remap_lut_inplace remaps int8 codes and reports counts" {
         lut.len,
         3,
         -1,
-        1,
         FLAG_ALLOW_MISSING | FLAG_VALIDATE_INPUT | FLAG_COLLECT_COUNTS,
         &report,
     );
@@ -593,7 +620,6 @@ test "zhcm_remap_lut_copy leaves source untouched" {
         lut.len,
         2,
         -1,
-        1,
         FLAG_ALLOW_MISSING | FLAG_VALIDATE_INPUT | FLAG_COLLECT_COUNTS,
         &report,
     );

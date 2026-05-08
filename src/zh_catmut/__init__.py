@@ -1,5 +1,12 @@
 from __future__ import annotations
 
+try:
+    from importlib.metadata import PackageNotFoundError, version
+
+    __version__ = version("zh-catmut")
+except PackageNotFoundError:  # pragma: no cover
+    __version__ = "0.2.0"
+
 from ._categorical import remap_categorical, remap_codes_inplace
 from ._errors import (
     CopyOnWriteSafetyError,
@@ -9,13 +16,6 @@ from ._errors import (
     ZhCatmutError,
 )
 from ._types import NativeExecutionReport, NativeGateReport
-
-try:
-    from importlib.metadata import version
-
-    __version__ = version("zh-catmut")
-except Exception:
-    __version__ = "0.1.0"
 
 __all__ = [
     "CopyOnWriteSafetyError",
