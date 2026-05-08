@@ -32,11 +32,16 @@ def test_native_library_exports_expected_abi() -> None:
 
     assert int(lib.zhcm_abi_version()) == ZHCM_ABI_VERSION
     assert lib.zhcm_status_message(ZHCM_OK).decode("utf-8") == "ok"
-    assert lib.zhcm_status_message(ZHCM_ERR_MISALIGNED_POINTER).decode("utf-8") == "misaligned pointer"
+    assert (
+        lib.zhcm_status_message(ZHCM_ERR_MISALIGNED_POINTER).decode("utf-8")
+        == "misaligned pointer"
+    )
 
 
 @pytest.mark.parametrize("dtype", [np.int8, np.int16, np.int32, np.int64])
-def test_remap_codes_inplace_all_supported_signed_dtypes(dtype: type[np.signedinteger]) -> None:
+def test_remap_codes_inplace_all_supported_signed_dtypes(
+    dtype: type[np.signedinteger],
+) -> None:
     codes = np.array([0, 1, 2, -1, 1], dtype=dtype)
     lut = np.array([2, 0, 1], dtype=np.int64)
 
@@ -165,9 +170,13 @@ def test_remap_codes_inplace_rejects_bad_lut_shape_dtype_and_alignment() -> None
     codes = np.array([0, 1], dtype=np.int8)
 
     with pytest.raises(MemoryGateError, match="one-dimensional"):
-        remap_codes_inplace(codes, np.array([[1, 0]], dtype=np.int64), target_category_count=2)
+        remap_codes_inplace(
+            codes, np.array([[1, 0]], dtype=np.int64), target_category_count=2
+        )
     with pytest.raises(MemoryGateError, match="dtype int64"):
-        remap_codes_inplace(codes, np.array([1, 0], dtype=np.int32), target_category_count=2)
+        remap_codes_inplace(
+            codes, np.array([1, 0], dtype=np.int32), target_category_count=2
+        )
 
     raw = np.zeros(17, dtype=np.uint8)
     lut = np.ndarray(shape=(2,), dtype=np.int64, buffer=raw, offset=1)
@@ -218,7 +227,9 @@ def test_remap_categorical_default_copy_preserves_source() -> None:
 
 
 def test_remap_categorical_accepts_categorical_input() -> None:
-    cat = pd.Categorical(["old", "same", None], categories=["old", "same"], ordered=True)
+    cat = pd.Categorical(
+        ["old", "same", None], categories=["old", "same"], ordered=True
+    )
 
     out = remap_categorical(cat, {"old": "new"})
 
@@ -230,7 +241,9 @@ def test_remap_categorical_accepts_categorical_input() -> None:
 
 
 def test_remap_categorical_accepts_categorical_index() -> None:
-    index = pd.CategoricalIndex(["old", "same", None], categories=["old", "same"], name="state")
+    index = pd.CategoricalIndex(
+        ["old", "same", None], categories=["old", "same"], name="state"
+    )
 
     out = remap_categorical(index, {"old": "new"})
 
@@ -257,7 +270,9 @@ def test_remap_categorical_preserves_ordered_on_categorical_index() -> None:
 
 
 def test_remap_categorical_accepts_dataframe_column_series() -> None:
-    df = pd.DataFrame({"state": pd.Categorical(["old", "same"], categories=["old", "same"])})
+    df = pd.DataFrame(
+        {"state": pd.Categorical(["old", "same"], categories=["old", "same"])}
+    )
 
     out = remap_categorical(df["state"], {"old": "new"})
 
@@ -304,7 +319,9 @@ def test_remap_categorical_copy_fallback_false_requires_expert_override() -> Non
     with pytest.raises(CopyOnWriteSafetyError, match="uniquely owned"):
         remap_categorical(cat, {"same": "old"}, copy_fallback=False)
 
-    out = remap_categorical(cat, {"same": "old"}, copy_fallback=False, assume_unique=True)
+    out = remap_categorical(
+        cat, {"same": "old"}, copy_fallback=False, assume_unique=True
+    )
 
     assert out.tolist() == ["old", "old"]
     assert list(out.categories) == ["old"]

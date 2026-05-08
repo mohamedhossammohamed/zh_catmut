@@ -25,7 +25,12 @@ def _zig_platform() -> str:
     }.get(machine)
     if system == "linux" and arch in {"x86_64", "aarch64"}:
         return f"{arch}-linux"
-    raise RuntimeError(f"unsupported Zig bootstrap platform: {platform.system()} {platform.machine()}")
+    if system == "darwin" and arch in {"x86_64", "aarch64"}:
+        return f"{arch}-macos"
+    raise RuntimeError(
+        f"unsupported Zig bootstrap platform: {platform.system()} {platform.machine()}. "
+        f"Use a system package manager (e.g. brew install zig) or download manually on Windows/macOS."
+    )
 
 
 def install_zig(install_dir: Path, version: str = ZIG_VERSION) -> Path:

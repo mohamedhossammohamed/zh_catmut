@@ -81,7 +81,7 @@ def load_native() -> ctypes.CDLL:
     try:
         resource = files("zh_catmut").joinpath(library_name)
         path = stack.enter_context(as_file(resource))
-        if os.name == "nt":
+        if os.name == "nt" and hasattr(os, "add_dll_directory"):
             stack.enter_context(os.add_dll_directory(str(path.parent)))
 
         lib = ctypes.CDLL(str(path))

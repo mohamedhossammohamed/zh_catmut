@@ -122,16 +122,24 @@ def build_parser() -> argparse.ArgumentParser:
         prog="zh-catmut",
         description="Help and diagnostics for zh_catmut.",
     )
-    parser.add_argument("--version", action="version", version=f"zh-catmut {_package_version()}")
+    parser.add_argument(
+        "--version", action="version", version=f"zh-catmut {_package_version()}"
+    )
     subparsers = parser.add_subparsers(dest="command")
 
-    info = subparsers.add_parser("info", help="print package purpose, install, API, and links")
+    info = subparsers.add_parser(
+        "info", help="print package purpose, install, API, and links"
+    )
     info.set_defaults(func=_cmd_info)
 
-    doctor = subparsers.add_parser("doctor", help="verify imports, native library loading, and remap smoke tests")
+    doctor = subparsers.add_parser(
+        "doctor", help="verify imports, native library loading, and remap smoke tests"
+    )
     doctor.set_defaults(func=_cmd_doctor)
 
-    example = subparsers.add_parser("example", help="print a minimal Pandas usage example")
+    example = subparsers.add_parser(
+        "example", help="print a minimal Pandas usage example"
+    )
     example.set_defaults(func=_cmd_example)
 
     return parser

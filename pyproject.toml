@@ -19,7 +19,7 @@ license = "Apache-2.0"
 license-files = ["LICENSE"]
 keywords = ["pandas", "categorical", "numpy", "zig", "ffi", "native-extension", "dataframe"]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "Intended Audience :: Science/Research",
     "Operating System :: MacOS",
@@ -49,18 +49,22 @@ X = "https://x.com/MohamedHz72007"
 
 [project.optional-dependencies]
 dev = [
-    "build",
-    "pytest",
-    "twine",
+    "build>=1.0",
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
+    "twine>=5.0",
+    "mypy>=1.0",
+    "ruff>=0.4.0",
 ]
 test = [
-    "pytest",
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
 ]
 release = [
-    "build",
-    "cibuildwheel",
-    "pytest",
-    "twine",
+    "build>=1.0",
+    "cibuildwheel>=2.16",
+    "pytest>=8.0",
+    "twine>=5.0",
 ]
 
 [project.scripts]
@@ -86,6 +90,19 @@ test-command = "python -m zh_catmut doctor && python -m pytest -q {project}/test
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-ra"
+
+[tool.coverage.run]
+omit = ["src/zh_catmut/_cli.py", "src/zh_catmut/__main__.py"]
+
+[tool.mypy]
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_return_any = true
+strict_equality = true
+
+[[tool.mypy.overrides]]
+module = ["pandas.*", "numpy.*"]
+ignore_missing_imports = true
 
 [tool.cibuildwheel.linux]
 archs = ["x86_64"]

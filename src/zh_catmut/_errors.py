@@ -14,7 +14,9 @@ class NativeLibraryLoadError(ZhCatmutError):
 class NativeStatusError(ZhCatmutError):
     """Raised when the native library returns a non-zero status."""
 
-    def __init__(self, context: str, status: int, message: str, report: Any = None) -> None:
+    def __init__(
+        self, context: str, status: int, message: str, report: Any = None
+    ) -> None:
         super().__init__(f"{context} failed: {message} ({status})")
         self.context = context
         self.status = status

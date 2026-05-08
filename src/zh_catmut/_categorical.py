@@ -31,7 +31,9 @@ def _status_message(lib: ctypes.CDLL, status: int) -> str:
     raw = lib.zhcm_status_message(int(status))
     if raw is None:
         return "unknown status"
-    return raw.decode("utf-8", "replace")
+    if isinstance(raw, bytes):
+        return raw.decode("utf-8", "replace")
+    return str(raw)
 
 
 def _raise_for_status(
@@ -42,7 +44,9 @@ def _raise_for_status(
 ) -> None:
     if int(status) == ZHCM_OK:
         return
-    raise NativeStatusError(context, int(status), _status_message(lib, int(status)), report)
+    raise NativeStatusError(
+        context, int(status), _status_message(lib, int(status)), report
+    )
 
 
 _CategoricalKind = Literal["series", "categorical", "categorical_index"]
@@ -62,7 +66,7 @@ def _prediction_flags(allow_missing: bool) -> int:
     return flags
 
 
-def _lut_pointer(lut: np.ndarray) -> ctypes.POINTER(ctypes.c_int64):
+def _lut_pointer(lut: np.ndarray) -> Any:
     return lut.ctypes.data_as(ctypes.POINTER(ctypes.c_int64))
 
 
@@ -225,7 +229,9 @@ def _category_index(label: Any, categories: list[Any], index: dict[Any, int]) ->
         return len(categories) - 1
 
 
-def _build_lut(cat: pd.Categorical, mapping: Mapping[object, object]) -> Tuple[list[Any], np.ndarray]:
+def _build_lut(
+    cat: pd.Categorical, mapping: Mapping[object, object]
+) -> Tuple[list[Any], np.ndarray]:
     new_categories: list[Any] = []
     category_index: dict[Any, int] = {}
     old_categories = list(cat.categories)
@@ -249,7 +255,9 @@ def _codes_are_owned(codes: np.ndarray) -> bool:
     return bool(codes.flags.owndata) and codes.base is None
 
 
-def _as_categorical(obj: pd.Series | pd.Categorical | pd.CategoricalIndex) -> Tuple[pd.Categorical, _CategoricalKind]:
+def _as_categorical(
+    obj: pd.Series | pd.Categorical | pd.CategoricalIndex,
+) -> Tuple[pd.Categorical, _CategoricalKind]:
     if isinstance(obj, pd.Series):
         if not isinstance(obj.dtype, pd.CategoricalDtype):
             raise TypeError("Series input must have categorical dtype")
@@ -258,7 +266,9 @@ def _as_categorical(obj: pd.Series | pd.Categorical | pd.CategoricalIndex) -> Tu
         return obj.array, "categorical_index"
     if isinstance(obj, pd.Categorical):
         return obj, "categorical"
-    raise TypeError("obj must be a pandas Series, pandas Categorical, or pandas CategoricalIndex")
+    raise TypeError(
+        "obj must be a pandas Series, pandas Categorical, or pandas CategoricalIndex"
+    )
 
 
 def _check_inplace_safety(

@@ -4,7 +4,7 @@ import ctypes
 import operator
 import sys
 from contextlib import contextmanager
-from typing import Iterator
+from typing import Any, Iterator
 
 import numpy as np
 
@@ -16,7 +16,7 @@ _INT64_MAX = (1 << 63) - 1
 _SIZE_T_MAX = ctypes.c_size_t(-1).value
 
 
-def _index(value: object, name: str) -> int:
+def _index(value: Any, name: str) -> int:
     try:
         return operator.index(value)
     except TypeError as exc:

@@ -1,11 +1,8 @@
 from __future__ import annotations
 
-try:
-    from importlib.metadata import PackageNotFoundError, version
+from importlib.metadata import version
 
-    __version__ = version("zh-catmut")
-except PackageNotFoundError:  # pragma: no cover
-    __version__ = "0.2.0"
+__version__ = version("zh-catmut")
 
 from ._categorical import remap_categorical, remap_codes_inplace
 from ._errors import (
